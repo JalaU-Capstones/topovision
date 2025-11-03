@@ -1,0 +1,9 @@
+# ======================================================
+# TopoVision - Lightweight Runtime Dependencies
+# Python Version: 3.11
+# ======================================================
+
+numpy==1.26.4
+opencv-python-headless==4.10.0.84   # Lighter version without GUI dependencies
+Pillow==10.3.0
+matplotlib==3.9.2

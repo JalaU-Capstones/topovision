@@ -1,0 +1,27 @@
+# ======================================================
+# TopoVision - Development Dependencies
+# Python Version: 3.11
+# ======================================================
+
+# --- Testing and Coverage ---
+pytest==8.3.3             # Unit testing framework
+pytest-cov==5.0.0         # Test coverage reporting
+
+# --- Linting and Code Quality ---
+flake8==7.1.1             # Style and syntax checker
+black==24.8.0             # Code formatter
+isort==5.13.2             # Import sorting for clean structure
+mypy==1.13.0              # Static type checker
+
+# --- Pre-commit Hooks ---
+pre-commit==4.0.1         # Git hooks to enforce code style automatically
+
+# --- Documentation ---
+pdoc==14.4.0              # Generate clean API documentation from docstrings
+
+# --- Build and Packaging Tools ---
+setuptools==75.3.0        # For local installations and distributions
+wheel==0.44.0             # Build Python wheels
+
+# --- Optional Developer Utilities ---
+ipython==8.28.0           # Interactive development shell

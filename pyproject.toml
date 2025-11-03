@@ -1,0 +1,34 @@
+[project]
+name = "topovision"
+version = "0.1.0"
+description = "TopoVision - 3D Topographic Analysis System for Calculus II"
+authors = [
+    { name = "TopoVision Team", email = "code.with.botina@gmail.com" }
+]
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy==1.26.4",
+    "opencv-python==4.10.0.84",
+    "matplotlib==3.9.2",
+    "scipy==1.14.1",
+    "Pillow==10.3.0",
+    "python-dotenv==1.0.1"
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+python_version = 3.11
+strict = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q --cov=src"
+testpaths = ["src/topovision/tests"]
