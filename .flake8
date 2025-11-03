@@ -1,0 +1,34 @@
+# ======================================================
+# TopoVision - Flake8 Configuration
+# Language: Python 3.11
+# Purpose: Enforce consistent Python style across the project
+# ======================================================
+
+[flake8]
+# Maximum allowed line length (same as Black formatter)
+max-line-length = 88
+
+# Ignore some rules that conflict with Black or are too strict
+ignore =
+    E203,  # Whitespace before ':'
+    W503,  # Line break before binary operator
+    F403,  # 'from module import *' used (allowed in __init__.py)
+    F401,  # Imported but unused (useful during development)
+
+# Exclude some directories from checks
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    build,
+    dist,
+    docs
+
+# Show source code for each error in output
+show-source = true
+
+# Count total errors at the end of the run
+statistics = true
+
+# Use the project root as the base directory
+base = src/topovision
