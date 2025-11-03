@@ -1,12 +1,12 @@
 # 1️⃣ Clone repository
-git clone https://github.com/JalaU-Capstones/topovision.git  
+git clone https://github.com/JalaU-Capstones/topovision.git
 cd topovision
 
 # 2️⃣ Create a virtual environment
-python3.11 -m venv .venv  
-source .venv/bin/activate   # (Linux/Mac)  
-# or  
-.venv\Scripts\activate      # (Windows)  
+python3.11 -m venv .venv
+source .venv/bin/activate   # (Linux/Mac)
+# or
+.venv\Scripts\activate      # (Windows)
 
 # 3️⃣ Install runtime dependencies
 pip install -r requirements.txt

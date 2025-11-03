@@ -1,7 +1,7 @@
 # 👨‍💻 TopoVision — User Guide
 
-> **Purpose:**  
-> This guide explains how to install, run, and use the **TopoVision 3D Topographic Analysis System**.  
+> **Purpose:**
+> This guide explains how to install, run, and use the **TopoVision 3D Topographic Analysis System**.
 > It is written for academic users and reviewers who wish to test the system for Calculus II applications.
 
 ---
@@ -11,8 +11,8 @@
 **TopoVision** is an educational software designed to connect **multivariable calculus** with **visual topographic analysis**.
 
 It uses a standard webcam (or video input) to:
-- Capture surface or terrain data in real time,  
-- Compute **gradients**, **partial derivatives**, and **surface integrals**,  
+- Capture surface or terrain data in real time,
+- Compute **gradients**, **partial derivatives**, and **surface integrals**,
 - Visualize the data through **color maps** and **vector fields**.
 
 ---

@@ -1,14 +1,14 @@
 # 🧭 TopoVision — GitHub Flow Guide
 
-> **Purpose:**  
-> This guide explains how the TopoVision development team collaborates using **GitHub Flow**.  
+> **Purpose:**
+> This guide explains how the TopoVision development team collaborates using **GitHub Flow**.
 > It ensures consistency, clean merges, and a reliable project history across all contributors.
 
 ---
 
 ## 🌿 What is GitHub Flow?
 
-**GitHub Flow** is a lightweight and modern workflow based on short-lived branches.  
+**GitHub Flow** is a lightweight and modern workflow based on short-lived branches.
 It is designed for continuous integration and fast collaboration.
 
 Main idea:
@@ -35,7 +35,7 @@ Main idea:
 
 ## 🧩 Branch Naming Convention
 
-Each branch name should be **short, lowercase**, and **descriptive**.  
+Each branch name should be **short, lowercase**, and **descriptive**.
 Format:
 
 ```
@@ -59,7 +59,7 @@ chore/add-ci-config
 
 ## 💬 Commit Message Convention
 
-TopoVision uses the **Conventional Commits** standard.  
+TopoVision uses the **Conventional Commits** standard.
 Each commit message should follow this format:
 
 ```

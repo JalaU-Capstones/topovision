@@ -1,16 +1,16 @@
 # 🧭 TopoVision — System Architecture Overview
 
-> **Purpose:**  
-> This document provides a detailed overview of the internal architecture of **TopoVision**,  
-> describing its core components, data flow, and design principles.  
+> **Purpose:**
+> This document provides a detailed overview of the internal architecture of **TopoVision**,
+> describing its core components, data flow, and design principles.
 > It serves as a reference for contributors and maintainers.
 
 ---
 
 ## 🧩 1. Architectural Overview
 
-TopoVision follows a **modular layered architecture** designed for scalability, maintainability,  
-and separation of concerns.  
+TopoVision follows a **modular layered architecture** designed for scalability, maintainability,
+and separation of concerns.
 
 Each layer has a specific responsibility, and all interactions flow through well-defined interfaces.
 
@@ -34,7 +34,7 @@ Each layer has a specific responsibility, and all interactions flow through well
 
 ## 🧠 2. Design Principles
 
-TopoVision strictly follows the **SOLID** principles and **Design Patterns**  
+TopoVision strictly follows the **SOLID** principles and **Design Patterns**
 to ensure modularity and testability.
 
 | Principle | Meaning | Application Example |
