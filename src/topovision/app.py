@@ -1,12 +1,17 @@
 """TopoVision main application entry point (Facade pattern)."""
 
-from topovision.gui.gui_module import start_gui
+import tkinter as tk
+
+from topovision.gui.gui_module import MainWindow
 
 
 def main() -> None:
     """Entry point for the TopoVision system."""
     print("🚀 TopoVision initialized (development mode).")
-    start_gui()
+
+    # Create and run the main GUI window
+    app = MainWindow()
+    app.run()
 
 
 if __name__ == "__main__":
