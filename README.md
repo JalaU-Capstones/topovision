@@ -123,9 +123,13 @@ pip install -r requirements.txt
 ```
 
 ### 4️⃣ Run the project
-
+*In Windows*:
 ```bash
-python -m src.topovision.app
+./run.bat
+```
+*In Linux*:
+```bash
+./run.sh
 ```
 
 You should see a GUI window with two buttons:
