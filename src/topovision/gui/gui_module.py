@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import Canvas, Tk, ttk
-from typing import Optional
+from typing import Optional, Tuple
 
 import cv2
 from PIL import Image, ImageTk
@@ -9,7 +9,7 @@ from topovision.core.interfaces import Camera
 
 
 class MainWindow(Tk):
-    """Main application window for TopoVision."""
+    """Main application window for TopoVision with interactive region selection."""
 
     def __init__(self, camera: Camera) -> None:
         """
@@ -45,6 +45,17 @@ class MainWindow(Tk):
 
         self.protocol("WM_DELETE_WINDOW", self.on_exit)
 
+        # --- Selection variables ---
+        self.selection_start: Optional[Tuple[int, int]] = None
+        self.selection_rect_id: Optional[int] = None
+        self.selected_region: Optional[Tuple[int, int, int, int]] = None  # x1, y1, x2, y2
+
+        # --- Bind mouse events ---
+        self.canvas.bind("<ButtonPress-1>", self._on_click)
+        self.canvas.bind("<B1-Motion>", self._on_drag)
+        self.canvas.bind("<ButtonRelease-1>", self._on_release)
+
+    # --- Camera controls ---
     def toggle_camera(self) -> None:
         """Toggles the camera state between running and paused."""
         if not self.is_camera_running:
@@ -75,14 +86,12 @@ class MainWindow(Tk):
     def stop_capture(self) -> None:
         """Stops the camera capture permanently and releases resources."""
         if self.is_camera_running:
-            self.pause_capture()  # First, pause the stream
+            self.pause_capture()
         self.camera.stop()
         print("Camera capture stopped and resources released.")
 
     def _update_frame(self) -> None:
-        """
-        Fetches a frame, resizes it to fit the canvas, and displays it.
-        """
+        """Fetches a frame, resizes it to fit the canvas, and displays it."""
         if not self.is_camera_running:
             return
 
@@ -91,17 +100,62 @@ class MainWindow(Tk):
             canvas_width = self.canvas.winfo_width()
             canvas_height = self.canvas.winfo_height()
 
-            # Ensure canvas is ready and has a valid size before resizing
             if canvas_width > 1 and canvas_height > 1:
-                # Resize frame to fit canvas using an efficient interpolation
                 resized_frame = cv2.resize(
                     frame, (canvas_width, canvas_height), interpolation=cv2.INTER_AREA
                 )
                 self.photo = ImageTk.PhotoImage(image=Image.fromarray(resized_frame))
                 self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
 
-        self.after(15, self._update_frame)  # Schedule the next update
+                # Redraw selection rectangle if it exists
+                if self.selected_region:
+                    x1, y1, x2, y2 = self.selected_region
+                    self.selection_rect_id = self.canvas.create_rectangle(
+                        x1, y1, x2, y2,
+                        outline="yellow", width=2, dash=(4, 2), fill="", tags="selection"
+                    )
 
+        self.after(15, self._update_frame)
+
+    # --- Mouse event handlers ---
+    def _on_click(self, event):
+        """Start region selection."""
+        self.selection_start = (event.x, event.y)
+        # Remove previous rectangle
+        if self.selection_rect_id:
+            self.canvas.delete(self.selection_rect_id)
+            self.selection_rect_id = None
+        print(f"Selection started at ({event.x}, {event.y})")
+
+    def _on_drag(self, event):
+        """Update the selection rectangle while dragging."""
+        if self.selection_start:
+            x1, y1 = self.selection_start
+            x2, y2 = event.x, event.y
+            # Remove previous rectangle
+            if self.selection_rect_id:
+                self.canvas.delete(self.selection_rect_id)
+            # Draw new rectangle
+            self.selection_rect_id = self.canvas.create_rectangle(
+                x1, y1, x2, y2,
+                outline="yellow", width=2, dash=(4, 2), fill="", tags="selection"
+            )
+
+    def _on_release(self, event):
+        """Finalize selection and store region coordinates."""
+        if self.selection_start:
+            x1, y1 = self.selection_start
+            x2, y2 = event.x, event.y
+            # Normalize coordinates
+            x1, x2 = sorted([x1, x2])
+            y1, y2 = sorted([y1, y2])
+            self.selected_region = (x1, y1, x2, y2)
+            self.selection_start = None
+            print(f"Selection finalized: {self.selected_region}")
+            # TODO: send coordinates to calculation module
+            # e.g., self.camera.calculate_region(x1, y1, x2, y2)
+
+    # --- Exit & run ---
     def on_exit(self) -> None:
         """Handles window closing and ensures safe camera teardown."""
         print("Exiting application...")
