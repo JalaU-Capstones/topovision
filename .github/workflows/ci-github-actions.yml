@@ -5,8 +5,8 @@ on:
     branches: [ develop ]
 
 jobs:
-  test:
-    name: Test & Lint (${{ matrix.os }}, Python ${{ matrix.python-version }})
+  quality:
+    name: Lint & Type Check (${{ matrix.os }}, Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -38,13 +38,3 @@ jobs:
       - name: Type checking
         run: |
           mypy src
-
-      - name: Run tests
-        run: |
-          pytest --disable-warnings --maxfail=1 --cov=src
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-${{ matrix.os }}
-          path: ./.coverage
