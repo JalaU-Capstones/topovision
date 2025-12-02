@@ -40,3 +40,30 @@ class Camera(ABC):
             A numpy array representing the frame, or None if no frame is available.
         """
         raise NotImplementedError
+
+
+class ITopographicData(ABC):
+    """
+    Any class intended to be consumed by the Riemann calculator must implement this interface.
+    """
+    
+    @property
+    @abstractmethod
+    def width(self) -> int:
+        """Returns the width of the data matrix (X-axis)."""
+        pass
+
+    @property
+    @abstractmethod
+    def height(self) -> int:
+        """Returns the height of the data matrix (Y-axis)."""
+        pass
+
+    @property
+    @abstractmethod
+    def processed_matrix(self) -> np.ndarray:
+        """
+        Returns the processed numerical matrix (NumPy Array).
+        Represents the Z values (height/intensity) at each (x, y) coordinate.
+        """
+        pass
