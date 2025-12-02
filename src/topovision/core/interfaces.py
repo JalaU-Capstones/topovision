@@ -1,47 +1,97 @@
-"""Core interfaces and models for TopoVision."""
+"""Core interfaces for TopoVision."""
 
 from abc import ABC, abstractmethod
 from typing import Optional
-
 import numpy as np
 from numpy.typing import NDArray
+from .models import FrameData, Region, Result
 
 
-class Camera(ABC):
-    """
-    Abstract base class for camera implementations.
-
-    This interface defines the contract for camera devices, allowing for
-    interchangeable concrete implementations (e.g., a real OpenCV camera
-    or a mock camera for testing).
-    """
+class ICamera(ABC):
+    """Abstract interface for camera implementations."""
 
     @abstractmethod
     def start(self) -> None:
-        """Starts the camera capture stream."""
+        """Start the camera capture."""
         raise NotImplementedError
 
     @abstractmethod
     def stop(self) -> None:
-        """Stops the camera capture stream and releases resources."""
+        """Stop the camera and release resources."""
         raise NotImplementedError
 
     @abstractmethod
     def pause(self) -> None:
-        """Pauses the camera capture stream."""
+        """Pause camera capture."""
         raise NotImplementedError
 
     @abstractmethod
     def get_frame(self) -> Optional[NDArray[np.uint8]]:
+        """Fetch the latest frame from the camera."""
+        raise NotImplementedError
+
+
+class ICalculator(ABC):
+    """Abstract interface for performing topographic calculations."""
+
+    @abstractmethod
+    def derivative(self, frame: FrameData, region: Region, axis: str) -> float:
         """
-        Fetches the latest frame from the camera.
+        Compute partial derivative along given axis ('x' or 'y').
+
+        Args:
+            frame (FrameData): The frame data to analyze.
+            region (Region): The region to compute over.
+            axis (str): Axis of derivative, 'x' or 'y'.
 
         Returns:
-            A numpy array representing the frame, or None if no frame is available.
+            float: Calculated derivative.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def gradient(self, frame: FrameData, region: Region) -> "GradientResult":
+        """
+        Compute gradient over the specified region.
+
+        Args:
+            frame (FrameData): The frame data to analyze.
+            region (Region): The region to compute over.
+
+        Returns:
+            GradientResult: Object containing dx, dy arrays.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def volume(self, frame: FrameData, region: Region) -> float:
+        """
+        Compute volumetric sum (Riemann) over the region.
+
+        Args:
+            frame (FrameData): The frame data to analyze.
+            region (Region): The region to compute over.
+
+        Returns:
+            float: Computed volume.
         """
         raise NotImplementedError
 
 
+class IVisualizer(ABC):
+    """Abstract interface for visualizing frames and analysis results."""
+
+    @abstractmethod
+    def draw_region(self, frame: FrameData, region: Region) -> NDArray[np.uint8]:
+        """Draw the region rectangle on the frame."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def overlay_result(
+        self, frame: FrameData, region: Region, result: Result
+    ) -> NDArray[np.uint8]:
+        """Overlay calculation result visually on the frame."""
+        raise NotImplementedError
 class ITopographicData(ABC):
     """
     Any class intended to be consumed by the Riemann calculator must implement
