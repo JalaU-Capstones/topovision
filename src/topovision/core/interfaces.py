@@ -44,9 +44,10 @@ class Camera(ABC):
 
 class ITopographicData(ABC):
     """
-    Any class intended to be consumed by the Riemann calculator must implement this interface.
+    Any class intended to be consumed by the Riemann calculator must implement
+    this interface.
     """
-    
+
     @property
     @abstractmethod
     def width(self) -> int:
@@ -61,7 +62,7 @@ class ITopographicData(ABC):
 
     @property
     @abstractmethod
-    def processed_matrix(self) -> np.ndarray:
+    def processed_matrix(self) -> NDArray[np.uint8]:
         """
         Returns the processed numerical matrix (NumPy Array).
         Represents the Z values (height/intensity) at each (x, y) coordinate.
