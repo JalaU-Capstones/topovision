@@ -10,7 +10,7 @@ pytest-cov==5.0.0         # Test coverage reporting
 # --- Linting and Code Quality ---
 flake8==7.1.1             # Style and syntax checker
 black==24.8.0             # Code formatter
-isort==5.13.2             # Import sorting for clean structure
+isort==7.0.0             # Import sorting for clean structure
 mypy==1.13.0              # Static type checker
 
 # --- Pre-commit Hooks ---
