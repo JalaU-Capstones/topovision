@@ -8,7 +8,7 @@ pytest==8.3.3             # Unit testing framework
 pytest-cov==5.0.0         # Test coverage reporting
 
 # --- Linting and Code Quality ---
-flake8==7.1.1             # Style and syntax checker
+flake8==7.3.0             # Style and syntax checker
 black==24.8.0             # Code formatter
 isort==5.13.2             # Import sorting for clean structure
 mypy==1.13.0              # Static type checker
