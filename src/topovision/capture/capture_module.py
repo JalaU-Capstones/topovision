@@ -7,10 +7,10 @@ import cv2
 import numpy as np
 from numpy.typing import NDArray
 
-from topovision.core.interfaces import Camera
+from topovision.core.interfaces import ICamera
 
 
-class OpenCVCamera(Camera):
+class OpenCVCamera(ICamera):
     """A camera implementation using OpenCV."""
 
     def __init__(self, camera_id: int = 0) -> None:
@@ -61,7 +61,7 @@ class OpenCVCamera(Camera):
         return None
 
 
-class MockCamera(Camera):
+class MockCamera(ICamera):
     """A mock camera for testing purposes."""
 
     def __init__(self, width: int = 640, height: int = 480) -> None:
