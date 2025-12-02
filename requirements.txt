@@ -5,7 +5,7 @@
 
 # --- Core numerical computation ---
 numpy==1.26.4             # Core numerical operations and array manipulation
-scipy==1.14.1             # Advanced mathematical and numerical methods
+scipy==1.16.3             # Advanced mathematical and numerical methods
 
 # --- Computer Vision and Image Processing ---
 opencv-python==4.10.0.84  # Video capture, image processing, and frame handling
