@@ -13,7 +13,6 @@ Pillow==10.3.0            # Image manipulation (for GUI and pre-processing)
 
 # --- Visualization ---
 matplotlib==3.9.2         # Heatmap and gradient visualization
-tk==0.1.0                 # GUI toolkit (Tkinter comes pre-installed with Python)
 
 # --- Environment and Config Management ---
 python-dotenv==1.0.1      # Load environment variables from .env file

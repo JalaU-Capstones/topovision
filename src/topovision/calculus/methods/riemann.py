@@ -1,15 +1,23 @@
 """Riemann integration methods for surface area approximation."""
 
+from typing import Optional
+
 import numpy as np
-from topovision.core.interfaces import ITopographicData 
+
+from topovision.core.interfaces import ITopographicData
+
 
 class RiemannVolumeCalculator:
-    def __init__(self, scale_xy: float=1.0, scale_z: float=1.0) -> None:
+    def __init__(self, scale_xy: float = 1.0, scale_z: float = 1.0) -> None:
         self.dx = scale_xy
         self.dy = scale_xy
         self.scale_z = scale_z
 
-    def calculate_volume(self, frame_data: ITopographicData, region: tuple=None) -> float:
+    def calculate_volume(
+        self,
+        frame_data: ITopographicData,
+        region: Optional[tuple[int, int, int, int]] = None,
+    ) -> float:
         matrix = frame_data.processed_matrix
 
         if region:
