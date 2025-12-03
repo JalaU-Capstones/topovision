@@ -22,13 +22,31 @@ The main goal is to create a tool that connects mathematical theory with visual 
 
 ## ⚙️ **Key Features**
 
-* 🎥 Real-time video capture using OpenCV
-* 🧮 Numerical computation of partial derivatives and gradients
-* 🌈 3D visualization of heatmaps and vector fields
-* 🖱️ Interactive point and region selection on GUI
-* 🧠 Modular design following **SOLID** principles and **Design Patterns**
-* ⚡ Optimized for low-resource environments (Python 3.11 + NumPy vectorization)
-* 📦 Easy installation via PyPI
+*   🎥 Real-time video capture using OpenCV
+*   🧮 Numerical computation of partial derivatives and gradients
+*   ✨ **Dynamic 3D Surface Plots**: Interactive visualization of topographic data, including heatmaps and vector fields.
+*   🖱️ Interactive point and region selection on GUI
+*   🧠 Modular design following **SOLID** principles and **Design Patterns**
+*   ⚡ Optimized for low-resource environments (Python 3.11 + NumPy vectorization)
+*   📦 Easy installation via PyPI
+
+---
+
+## 🖼️ **Visualizations**
+
+TopoVision offers rich and interactive 3D visualizations to help understand complex topographic data.
+
+### Dynamic 3D Surface Plots
+
+Experience real-time rendering of surfaces, allowing you to observe changes in elevation and features interactively.
+
+![3D Surface Plot Screenshot](docs/images/3d_surface_plot.gif) <!-- Placeholder for a GIF or screenshot -->
+
+### Gradient Vector Fields
+
+Visualize the direction and magnitude of the steepest ascent across the terrain, providing insights into flow and slope.
+
+![Gradient Vector Field Screenshot](docs/images/gradient_vector_field.png) <!-- Placeholder for a screenshot -->
 
 ---
 
@@ -156,6 +174,7 @@ topovision/
 │       │   ├── visualization_module.py
 │       │   ├── heatmap.py
 │       │   └── vector_overlay.py
+│       │   └── plot3d.py          # Added 3D plotting capabilities
 │       ├── gui/
 │       │   └── gui_module.py
 │       ├── services/
@@ -223,13 +242,13 @@ main()
 
 ## 🧮 **Core Functionalities (Mathematical Overview)**
 
-| Feature               | Description                                 | Method                      |
-| --------------------- | ------------------------------------------- | --------------------------- |
-| Partial Derivatives   | Calculated using finite difference methods  | Central Difference Scheme   |
-| Gradient Vector       | Visualized as direction + magnitude arrows  | Sobel Operator              |
-| Double Integrals      | Computed with discrete Riemann sums         | Trapezoidal Rule            |
-| Surface Visualization | Rendered via color heatmaps                 | Matplotlib + NumPy          |
-| Real-time Processing  | Optimized numerical computations            | Numba JIT Compilation       |
+| Feature                   | Description                                         | Method                      |
+| :------------------------ | :-------------------------------------------------- | :-------------------------- |
+| Partial Derivatives       | Calculated using finite difference methods          | Central Difference Scheme   |
+| Gradient Vector           | Visualized as direction + magnitude arrows          | Sobel Operator              |
+| Double Integrals          | Computed with discrete Riemann sums                 | Trapezoidal Rule            |
+| 3D Surface Visualization  | Dynamic and interactive 3D plots of topographic surfaces | Matplotlib + NumPy          |
+| Real-time Processing      | Optimized numerical computations                    | Numba JIT Compilation       |
 
 ---
 
