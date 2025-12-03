@@ -72,7 +72,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./downloaded-dist/topovision-${{ github.ref_name }}.*.whl
+        asset_path: ./downloaded-dist/topovision-${{ substring(github.ref_name, 1) }}-py3-none-any.whl
         asset_name: topovision-${{ github.ref_name }}-py3-none-any.whl
         asset_content_type: application/vnd.python.wheel
 
@@ -83,6 +83,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./downloaded-dist/topovision-${{ github.ref_name }}.*.tar.gz
+        asset_path: ./downloaded-dist/topovision-${{ substring(github.ref_name, 1) }}.tar.gz
         asset_name: topovision-${{ github.ref_name }}.tar.gz
         asset_content_type: application/gzip
