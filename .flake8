@@ -6,7 +6,7 @@
 
 [flake8]
 # Maximum allowed line length (kept consistent with Black)
-max-line-length = 88
+max-line-length = 120
 
 # Ignore rules that conflict with Black or are too strict
 extend-ignore = E203, W503, F403, F401

@@ -1,4 +1,4 @@
-# 🧭 TopoVision — System Architecture Overview
+#  TopoVision — System Architecture Overview
 
 > **Purpose:**
 > This document provides a detailed overview of the internal architecture of **TopoVision**,
@@ -7,7 +7,7 @@
 
 ---
 
-## 🧩 1. Architectural Overview
+##  1. Architectural Overview
 
 TopoVision follows a **modular layered architecture** designed for scalability, maintainability,
 and separation of concerns.
@@ -32,7 +32,7 @@ Each layer has a specific responsibility, and all interactions flow through well
 
 ---
 
-## 🧠 2. Design Principles
+## 2. Design Principles
 
 TopoVision strictly follows the **SOLID** principles and **Design Patterns**
 to ensure modularity and testability.
@@ -47,7 +47,7 @@ to ensure modularity and testability.
 
 ---
 
-## 🧱 3. Project Directory Structure
+## 3. Project Directory Structure
 
 ```
 
@@ -95,7 +95,7 @@ src/topovision/
 
 ---
 
-## 🧩 4. Module Responsibilities
+## 4. Module Responsibilities
 
 | Module | Responsibility |
 |---------|----------------|
@@ -111,7 +111,7 @@ src/topovision/
 
 ---
 
-## ⚙️ 5. Data Flow Overview
+## 5. Data Flow Overview
 
 ```text
 [ Camera Backend ]
@@ -143,7 +143,7 @@ src/topovision/
 
 ---
 
-## 🧱 6. Design Patterns Used
+## 6. Design Patterns Used
 
 | Pattern      | Purpose                                               | Example in TopoVision                   |
 | ------------ | ----------------------------------------------------- | --------------------------------------- |
@@ -155,7 +155,7 @@ src/topovision/
 
 ---
 
-## 🧩 7. Testing Strategy
+##  7. Testing Strategy
 
 Tests are organized to ensure clarity and coverage:
 
@@ -171,7 +171,7 @@ pytest --cov=src/topovision --maxfail=1 --disable-warnings
 
 ---
 
-## 🧰 8. Future Architectural Improvements
+## 8. Future Architectural Improvements
 
 | Area          | Potential Enhancement                          |
 | ------------- | ---------------------------------------------- |
@@ -183,7 +183,7 @@ pytest --cov=src/topovision --maxfail=1 --disable-warnings
 
 ---
 
-## 🧭 9. Architecture Summary Diagram
+##  9. Architecture Summary Diagram
 
 ```text
                  ┌───────────────────────┐
@@ -214,7 +214,7 @@ pytest --cov=src/topovision --maxfail=1 --disable-warnings
 
 ---
 
-## 📚 10. Summary
+##  10. Summary
 
 TopoVision is structured to:
 

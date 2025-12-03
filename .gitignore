@@ -182,3 +182,8 @@ __pypackages__/
 
 # VSCode workspace history
 .history/
+
+# ============================
+# User Settings Files
+# ============================
+**/user_settings.json
