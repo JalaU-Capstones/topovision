@@ -1,469 +1,558 @@
 """
-Módulo de Interfaz Gráfica para TopoVision
+This module defines the main window of the TopoVision application,
+which orchestrates the GUI and the core application logic.
 """
 
+import json
+import logging
+import os
 import tkinter as tk
-from tkinter import Canvas, Tk, ttk, messagebox
-from typing import Optional, Tuple, Callable, Any
+from tkinter import Tk, messagebox, ttk
+from typing import Any, Callable, Dict, Optional, Tuple, Union, cast
 
 import cv2
 import numpy as np
 from PIL import Image, ImageTk
 
-try:
-    from topovision.core.interfaces import ICamera
-    Camera = ICamera
-except ImportError:
-    class ICamera:
-        def start(self): pass
-        def pause(self): pass
-        def stop(self): pass
-        def get_frame(self): return None
-    Camera = ICamera
+from topovision.calculus.calculus_module import AnalysisContext
+from topovision.capture.preprocessing import ImagePreprocessor
+from topovision.core.interfaces import ICamera  # Keep this import
+from topovision.core.models import (
+    AnalysisResult,
+    ArcLengthResult,
+    FrameData,
+    GradientResult,
+    RegionOfInterest,
+    VolumeResult,
+)
+from topovision.gui.analysis_panel import AnalysisPanel
+from topovision.gui.camera_controller import CameraController
+from topovision.gui.canvas_panel import CanvasPanel
+from topovision.gui.plot3d_window import Plot3DWindow
+from topovision.gui.theme import ThemeManager
+from topovision.services.task_queue import TaskQueue
+from topovision.visualization.visualizers import HeatmapVisualizer
+
+from .i18n import get_translator
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+# Define the path for user settings file
+USER_SETTINGS_FILE = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "user_settings.json"
+)
 
 
 class MainWindow(Tk):
+    """The main window of the TopoVision application."""
 
-    def __init__(self, camera: ICamera, calculation_callback: Optional[Callable] = None) -> None:
+    def __init__(
+        self,
+        camera: ICamera,
+        calculus_module: AnalysisContext,
+        task_queue: TaskQueue,
+        preprocessor: ImagePreprocessor,
+        lang: str = "en",
+    ) -> None:
+        """
+        Initializes the MainWindow.
+
+        Args:
+            camera (ICamera): The camera instance for video capture.
+            calculus_module (AnalysisContext): The module for performing calculations.
+            task_queue (TaskQueue): The queue for background tasks.
+            preprocessor (ImagePreprocessor): The preprocessor for denoising images.
+            lang (str): The language for the UI.
+        """
         super().__init__()
 
-        self.title("TopoVision - Análisis Topográfico 3D")
-        self.geometry("1200x800")  
-        self.configure(bg="#111214")  
-        self.minsize(1000, 700)
-        self.calculation_callback = calculation_callback 
+        self.translator = get_translator(lang)
+        self._ = self.translator
+        self._lang = lang
 
-        # ---- Camera & Analysis State ----
-        self.camera: Camera = camera
-        self.is_camera_running: bool = False
+        self.title(self._("app_title"))
+        self.geometry("1200x800")
+        self.minsize(1000, 700)
+
+        self.calculus_module = calculus_module
+        self.visualizer = HeatmapVisualizer()
+        self.task_queue = task_queue
+        self.preprocessor = preprocessor
+
+        # ---- State Management ----
+        self.camera_controller = CameraController(camera, self._update_canvas_image)
         self.photo: Optional[ImageTk.PhotoImage] = None
         self._analysis_result_photo: Optional[ImageTk.PhotoImage] = None
-        self.is_showing_analysis: bool = False 
+        self.is_showing_analysis: bool = False
+        self.selected_region: Optional[Tuple[int, int, int, int]] = None
+        self._last_frame: Optional[np.ndarray] = None
+        self._canvas_image_id: Optional[int] = None
+        self.plot3d_window: Optional[Plot3DWindow] = None
 
-        style = ttk.Style(self)
+        self.user_settings = self._load_user_settings()
+
+        self._setup_styles()
+        self._setup_ui()
+
+        self.protocol("WM_DELETE_WINDOW", self._on_exit)
+        self.after(100, self._process_results)
+        self.after(15, self._update_frame)
+
+    def _load_user_settings(self) -> Dict[str, Any]:
+        """
+        Loads user settings from a JSON file,
+        or returns defaults if not found/invalid.
+        """
+        default_settings: Dict[str, Any] = {
+            "tutorial_shown": {
+                "gradient": False,
+                "volume": False,
+                "arc_length": False,
+                "plot3d": False,
+            }
+        }
         try:
-            style.theme_use("clam")
-        except Exception:
-            pass
+            if os.path.exists(USER_SETTINGS_FILE):
+                with open(USER_SETTINGS_FILE, "r") as f:
+                    settings: Dict[str, Any] = json.load(f)
+                # Merge with defaults to ensure new tutorial flags are added
+                for key, value in default_settings["tutorial_shown"].items():
+                    if key not in settings.get("tutorial_shown", {}):
+                        settings.setdefault("tutorial_shown", {})[key] = value
+                return settings
+        except (json.JSONDecodeError, IOError) as e:
+            logging.warning(
+                f"Could not load user settings from {USER_SETTINGS_FILE}: {e}. "
+                "Using default settings."
+            )
+        return default_settings
 
-        self._setup_styles(style)  
-        
-        # Frame principal que contiene todo
+    def _save_user_settings(self) -> None:
+        """Saves current user settings to a JSON file."""
+        try:
+            with open(USER_SETTINGS_FILE, "w") as f:
+                json.dump(self.user_settings, f, indent=4)
+        except IOError as e:
+            logging.error(f"Could not save user settings to {USER_SETTINGS_FILE}: {e}")
+
+    def _show_tutorial(self, method: str) -> None:
+        """Displays a tutorial message for a given analysis method."""
+        tutorial_title_key = f"tutorial_{method}_title"
+        tutorial_message_key = f"tutorial_{method}"
+
+        title = self._(tutorial_title_key)
+        message = self._(tutorial_message_key)
+
+        messagebox.showinfo(title, message)
+
+        # Mark tutorial as shown and save settings
+        self.user_settings["tutorial_shown"][method] = True
+        self._save_user_settings()
+
+    def _setup_styles(self) -> None:
+        """Configures the Ttk styles for the application."""
+        style = ttk.Style(self)
+        theme_manager = ThemeManager(style)
+        theme_manager.apply("dark")
+
+    def _setup_ui(self) -> None:
+        """Initializes and places all UI components."""
         main_container = ttk.Frame(self)
         main_container.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
-        
-        # Configurar grid: 2 columnas (canvas + panel)
-        main_container.grid_columnconfigure(0, weight=3)  # Canvas (más ancho)
-        main_container.grid_columnconfigure(1, weight=1)  # Panel lateral
-        main_container.grid_rowconfigure(0, weight=1)     # Fila única
+        main_container.grid_columnconfigure(0, weight=3)
+        main_container.grid_columnconfigure(1, weight=1)
+        main_container.grid_rowconfigure(0, weight=1)
 
-        # 1. Canvas principal a la IZQUIERDA (Video/Heatmap Area)
-        self.canvas: Canvas = tk.Canvas(
-            main_container,
-            bg="#0E0F11",  # Color de fondo del canvas 
-            highlightthickness=0,
-        )
+        # --- Left Panel: Canvas ---
+        self.canvas = CanvasPanel(main_container, bg="#0E0F11", highlightthickness=0)
         self.canvas.grid(row=0, column=0, sticky="nsew", padx=(0, 15))
+        # The type of on_selection_made is
+        # Optional[Callable[[Optional[Tuple[int, int, int, int]], str, Any], None]]
+        self.canvas.on_selection_made = self._handle_selection
 
-        # 2. Panel de análisis 
-        self.analysis_frame = ttk.Frame(main_container, style="TFrame", width=250)
-        self.analysis_frame.grid(row=0, column=1, sticky="nsew")
-        self.analysis_frame.grid_propagate(False)  # Mantener ancho fijo
-        
-        # Configurar controles en el panel derecho
-        self._setup_analysis_controls()
+        # --- Right Panel: Analysis ---
+        self.analysis_panel = AnalysisPanel(
+            main_container, self._trigger_analysis, self.translator
+        )  # Pass main_container as master
+        self.analysis_panel.grid(row=0, column=1, sticky="nsew")
+        self.analysis_panel.toggle_btn.config(command=self.toggle_view)
+        self.analysis_panel.clear_btn.config(command=self.clear_selection)
 
-        # 3. Frame para botones inferiores (debajo del canvas y panel)
-        self.buttons_frame: ttk.Frame = ttk.Frame(self)
-        self.buttons_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=50, pady=15)
-        
-        # Botón 'Open Camera' (izquierda)
-        self.btn_toggle_camera: ttk.Button = ttk.Button(
-            self.buttons_frame, text="Open Camera", command=self.toggle_camera
+        # --- Bottom Buttons ---
+        buttons_frame = ttk.Frame(self)
+        buttons_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=50, pady=15)
+
+        self.btn_toggle_camera = ttk.Button(
+            buttons_frame, text=self._("open_camera_button"), command=self.toggle_camera
         )
         self.btn_toggle_camera.pack(side=tk.LEFT, padx=10, pady=5)
 
-        # Botón 'Exit' (derecha) - FIX: Cambiar self.on_exit a self._on_exit
-        self.btn_exit: ttk.Button = ttk.Button(
-            self.buttons_frame, text="Exit", command=self._on_exit
+        # Button to open 3D Plot Window (now the only 3D entry point)
+        self.btn_open_3d_plot = ttk.Button(
+            buttons_frame,
+            text=self._("open_3d_plot_button"),
+            command=self._open_3d_plot_window,
+        )
+        self.btn_open_3d_plot.pack(side=tk.LEFT, padx=10, pady=5)
+
+        self.btn_exit = ttk.Button(
+            buttons_frame, text=self._("exit_button"), command=self._on_exit
         )
         self.btn_exit.pack(side=tk.RIGHT, padx=10, pady=5)
 
-        # ---- Selection State (Fase 3: Eventos de Usuario) ----
-        self.selection_start: Optional[Tuple[int, int]] = None
-        self.selection_rect_id: Optional[int] = None
-        self.selected_region: Optional[Tuple[int, int, int, int]] = None
-        
-        # ---- Event Bindings ----
-        self.canvas.bind("<ButtonPress-1>", self._on_click)
-        self.canvas.bind("<B1-Motion>", self._on_drag)
-        self.canvas.bind("<ButtonRelease-1>", self._on_release)
-        self._canvas_image_id = None
+        self._update_initial_canvas_message()
 
-        # Window close protocol - FIX: Cambiar self.on_exit a self._on_exit
-        self.protocol("WM_DELETE_WINDOW", self._on_exit)
-
-    def _setup_styles(self, style: ttk.Style) -> None:
-        """Configura los estilos Ttk para el tema oscuro - Fase 4"""
-        style.configure("TFrame", background="#111214")
-        style.configure("TLabel", background="#111214", foreground="#E6E6E6", font=("Arial", 10))
-        style.configure(
-            "TButton",
-            background="#1C1D20",
-            foreground="#E6E6E6",
-            padding=6,
-            borderwidth=0,
-            relief="flat"
-        )
-        style.map(
-            "TButton",
-            background=[("active", "#2C2D30")],
-            foreground=[("active", "white")]
-        )
-        style.configure("Heading.TLabel", font=("Arial", 12, "bold"), foreground="#4DA6FF")
-        
-    def _setup_analysis_controls(self) -> None:
-        """Crea el panel lateral con controles de cálculo - Fase 2"""
-        
-        # Título del panel
-        ttk.Label(self.analysis_frame, text="Controles de Análisis", style="Heading.TLabel").pack(pady=(10, 5))
-        ttk.Separator(self.analysis_frame).pack(fill=tk.X, padx=5, pady=5)
-        
-        # 1. Parámetros de Cálculo
-        ttk.Label(self.analysis_frame, text="Parámetros de Cálculo").pack(anchor=tk.W, padx=5, pady=(10, 0))
-        
-        param_frame = ttk.Frame(self.analysis_frame)
-        param_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        ttk.Label(param_frame, text="Factor Z:").pack(side=tk.LEFT, padx=(0, 5))
-        self.z_factor_entry = ttk.Entry(param_frame, width=8)
-        self.z_factor_entry.insert(0, "1.0")
-        self.z_factor_entry.pack(side=tk.LEFT)
-        
-        # Información sobre Factor Z
-        info_label = ttk.Label(
-            self.analysis_frame,
-            text="Escala valores de altura\n1.0 = normal, >1.0 = más sensible",
-            font=("Arial", 8),
-            foreground="#8B949E"
-        )
-        info_label.pack(anchor=tk.W, padx=5, pady=(0, 10))
-        
-        ttk.Separator(self.analysis_frame).pack(fill=tk.X, padx=5, pady=5)
-
-        # 2. Botones de Acción
-        ttk.Label(self.analysis_frame, text="Acciones de Análisis").pack(anchor=tk.W, padx=5, pady=(10, 0))
-
-        # Botón para calcular gradiente
-        gradient_btn = ttk.Button(
-            self.analysis_frame, 
-            text="Calcular Gradiente", 
-            command=lambda: self._trigger_analysis("gradient"),
-            style="TButton"
-        )
-        gradient_btn.pack(fill=tk.X, padx=10, pady=5)
-
-        # Botón para calcular volumen
-        volume_btn = ttk.Button(
-            self.analysis_frame, 
-            text="Calcular Volumen", 
-            command=lambda: self._trigger_analysis("volume"),
-            style="TButton"
-        )
-        volume_btn.pack(fill=tk.X, padx=10, pady=5)
-        
-        ttk.Separator(self.analysis_frame).pack(fill=tk.X, padx=5, pady=10)
-
-        # 3. Control de Visualización
-        ttk.Label(self.analysis_frame, text="Visualización").pack(anchor=tk.W, padx=5, pady=(10, 0))
-
-        # Botón para alternar vista
-        toggle_btn = ttk.Button(
-            self.analysis_frame, 
-            text="Alternar Vista", 
-            command=lambda: self.toggle_view(),
-            style="TButton"
-        )
-        toggle_btn.pack(fill=tk.X, padx=10, pady=5)
-        
-        # Botón para limpiar selección
-        clear_btn = ttk.Button(
-            self.analysis_frame, 
-            text="Borrar Selección", 
-            command=lambda: self.clear_selection(),
-            style="TButton"
-        )
-        clear_btn.pack(fill=tk.X, padx=10, pady=5)
-        
-        ttk.Separator(self.analysis_frame).pack(fill=tk.X, padx=5, pady=10)
-
-        # 4. Status/Feedback 
-        self.status_label_var = tk.StringVar(value="Sistema listo. Selecciona una región.")
-        self.status_label = ttk.Label(
-            self.analysis_frame, 
-            textvariable=self.status_label_var, 
-            wraplength=200,
-            font=("Arial", 9)
-        )
-        self.status_label.pack(fill=tk.X, padx=5, pady=5)
+    def _open_3d_plot_window(self) -> None:
+        """Opens or brings to front the 3D plot window."""
+        if self.plot3d_window is None or not self.plot3d_window.winfo_exists():
+            self.plot3d_window = Plot3DWindow(self, lang=self._lang)
+            self.plot3d_window.start_live_update()
+            if not self.user_settings["tutorial_shown"].get("plot3d", False):
+                logging.info("Showing 3D plot tutorial.")
+                self._show_tutorial("plot3d")
+            else:
+                logging.info("3D plot tutorial already shown.")
+        self.plot3d_window.lift()
+        self.set_status(self._("3d_plot_window_opened"))
 
     def set_status(self, message: str, is_error: bool = False) -> None:
-        """Actualiza la etiqueta de estado con mensajes amigables - Fase 4"""
-        color = "#FF6B6B" if is_error else "#E6E6E6"  # Rojo para errores 
-        self.status_label.config(foreground=color)
-        
-        # Mensajes de error
+        """Updates the status label."""
+        self.analysis_panel.set_status(message, is_error)
         if is_error:
-            if "camera" in message.lower():
-                friendly_message = "No se pudo conectar con la cámara. Verifica que esté conectada y no esté en uso."
-            elif "region" in message.lower():
-                friendly_message = "Por favor, selecciona una región rectangular primero."
-            elif "z factor" in message.lower():
-                friendly_message = "El Factor Z debe ser un número positivo (ej. 1.0, 2.5)"
-            else:
-                friendly_message = message
-            
-            self.status_label_var.set(f"{friendly_message}")
-            # Solo mostrar messagebox para errores críticos
-            if "camera" in message.lower() or "error" in message.lower():
-                messagebox.showerror("Error de TopoVision", friendly_message)
-        else:
-            self.status_label_var.set(f"✅ {message}")
-    
+            logging.error(message)
+            messagebox.showerror(self._("app_title"), message)
+
+    def _handle_selection(
+        self,
+        region: Optional[Tuple[int, int, int, int]],
+        message_key: str,
+        **kwargs: Any,
+    ) -> None:
+        """Callback for when a selection is made on the canvas."""
+        translated_message = self._(message_key, **kwargs)
+        self.selected_region = region
+        self.analysis_panel.set_status(translated_message, is_error=not region)
+
     def _trigger_analysis(self, method: str) -> None:
-        """Maneja la lógica de inicio de cálculo """
+        """Handles the logic for starting a calculation."""
         if self.selected_region is None:
-            self.set_status("Por favor, selecciona una región en la imagen primero.", is_error=True)
-            return
-        
-        if not self.is_camera_running and self._analysis_result_photo is None:
-            self.set_status("La cámara debe estar activa o debe haber un resultado previo.", is_error=True)
-            return
-    
-        # Leer el valor del Factor Z
-        try:
-            z_factor = float(self.z_factor_entry.get())
-        except ValueError:
-            self.set_status("'Factor Z' debe ser un número válido (ej. 1.0, 54).", is_error=True)
+            self.set_status(self._("region_error"), is_error=True)
             return
 
-        # Llamar al callback
-        if self.calculation_callback:
-            try:
-                self.calculation_callback(method, self.selected_region, z_factor) 
-                self.set_status(f"Calculando {method} con Factor Z: {z_factor}...")
-            except Exception as e:
-                self.set_status(f"Error al iniciar el cálculo: {e}", is_error=True)
+        if self._last_frame is None:
+            self.set_status(self._("no_frame_to_analyze"), is_error=True)
+            return
+
+        if not self.user_settings["tutorial_shown"].get(method, False):
+            self._show_tutorial(method)
+
+        try:
+            z_factor = self.analysis_panel.get_z_factor()
+        except ValueError as e:
+            self.set_status(str(e), is_error=True)
+            return
+
+        self.set_status(self._("calculating", method=method))
+        self.task_queue.submit_task(self._perform_calculation, method, z_factor)
+
+    def _perform_calculation(self, method: str, z_factor: float) -> Dict[str, Any]:
+        """The actual calculation logic to be run in a background thread."""
+        if self.selected_region is None or self._last_frame is None:
+            raise RuntimeError("No selected region or frame to perform calculation.")
+
+        x1, y1, x2, y2 = self.selected_region
+        h, w, _ = self._last_frame.shape
+        canvas_w, canvas_h = self.canvas.winfo_width(), self.canvas.winfo_height()
+
+        rx1 = int(x1 * w / canvas_w)
+        rx2 = int(x2 * w / canvas_w)
+        ry1 = int(y1 * h / canvas_h)
+        ry2 = int(y2 * h / canvas_h)
+
+        region_data = self._last_frame[ry1:ry2, rx1:rx2]
+
+        if method in ["gradient", "volume"]:
+            gray_region = cv2.cvtColor(region_data, cv2.COLOR_RGB2GRAY)
+            data_for_analysis: np.ndarray = gray_region
+        elif method == "arc_length":
+            points: list[Tuple[int, int]] = []
+            if region_data.shape[0] > 0 and region_data.shape[1] > 0:
+                gray_region_for_arc = cv2.cvtColor(region_data, cv2.COLOR_RGB2GRAY)
+                middle_row_idx = gray_region_for_arc.shape[0] // 2
+                for i in range(gray_region_for_arc.shape[1]):
+                    points.append((i, gray_region_for_arc[middle_row_idx, i]))
+            data_for_analysis = np.array(points)
         else:
-            # Si no hay callback, mensaje demo
-            self.set_status(f"Demo: {method} en región {self.selected_region}. Factor Z: {z_factor}")
+            raise ValueError(f"Unknown analysis method: {method}")
+
+        self.calculus_module.set_strategy(method)
+        calc_kwargs: Dict[str, Any] = {}
+        if method == "volume":
+            calc_kwargs["z_factor"] = z_factor
+
+        result = self.calculus_module.calculate(data_for_analysis, **calc_kwargs)
+
+        return {
+            "method": method,
+            "result": result,
+            "region": self.selected_region,
+            "z_factor": z_factor,
+        }
+
+    def _process_results(self) -> None:
+        """Checks for results from the task queue and updates the GUI."""
+        result = self.task_queue.get_result()
+        if result:
+            if isinstance(result, Exception):
+                self.set_status(
+                    self._("calculation_error", error=result), is_error=True
+                )
+            else:
+                self._handle_calculation_result(result)
+        self.after(100, self._process_results)
+
+    def _handle_calculation_result(self, result: Dict[str, Any]) -> None:
+        """Handles a successful calculation result."""
+        method: str = result.get("method", "")
+        calc_result: Union[GradientResult, VolumeResult, ArcLengthResult, None] = (
+            result.get("result")
+        )
+        region_coords: Optional[Tuple[int, int, int, int]] = result.get("region")
+
+        if region_coords is None:
+            self.set_status(
+                self._("calculation_error", error="Missing region data in result."),
+                is_error=True,
+            )
+            return
+
+        region = RegionOfInterest(*region_coords)
+
+        if method == "gradient" and isinstance(calc_result, GradientResult):
+            self.set_status(
+                self._(
+                    "calculating_gradient",
+                    dx=np.mean(calc_result.dz_dx),
+                    dy=np.mean(calc_result.dz_dy),
+                )
+            )
+            if self._last_frame is not None:
+                original_image_pil = Image.fromarray(self._last_frame)
+                analysis_result_model = AnalysisResult(
+                    method=method, result_data=calc_result, region=region
+                )
+                heatmap = self.visualizer.visualize(
+                    analysis_result_model, original_image=original_image_pil
+                )
+                self.display_result_image(heatmap)
+        elif method == "volume" and isinstance(calc_result, VolumeResult):
+            self.set_status(self._("calculating_volume", volume=calc_result.volume))
+        elif method == "arc_length" and isinstance(calc_result, ArcLengthResult):
+            self.set_status(self._("calculating_arc_length", length=calc_result.length))
+        else:
+            self.set_status(
+                self._(
+                    "calculation_error",
+                    error=f"Unexpected result type for method {method}",
+                ),
+                is_error=True,
+            )
 
     def clear_selection(self) -> None:
-        """Borra la región seleccionada"""
+        """Clears the current selection."""
+        self.canvas.clear_selection()
         self.selected_region = None
-        self.canvas.delete("selection")
-        self.set_status("Selección borrada.")
-        
+        self.set_status(self._("selection_cleared"))
+        if self.plot3d_window and self.plot3d_window.winfo_exists():
+            self.plot3d_window.clear_plot_data()
+
     def toggle_view(self) -> None:
-        """Alterna entre la vista de la cámara en vivo y la vista de análisis"""
+        """Toggles between the live camera view and the analysis view."""
         if self._analysis_result_photo is None:
-            self.set_status("No hay resultados de análisis para mostrar.", is_error=True)
+            self.set_status(self._("no_analysis_to_show"), is_error=True)
             return
-        
+
         self.is_showing_analysis = not self.is_showing_analysis
-        view_state = "Análisis" if self.is_showing_analysis else "Cámara en Vivo"
-        self.set_status(f"Vista cambiada a: {view_state}")
-        self._update_frame()
+        view_state = "analysis" if self.is_showing_analysis else "camera"
+        self.set_status(self._(f"view_changed_to_{view_state}"))
+        self._update_display()
 
     def display_result_image(self, pil_image: Image.Image) -> None:
-        """Muestra una imagen de resultado en el canvas - Integración"""
-        w = self.canvas.winfo_width()
-        h = self.canvas.winfo_height()
-        
+        """Displays a result image on the canvas."""
+        w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
         if w > 1 and h > 1:
             resized_img = pil_image.resize((w, h), Image.Resampling.LANCZOS)
             self._analysis_result_photo = ImageTk.PhotoImage(image=resized_img)
-            
             self.is_showing_analysis = True
-            self.set_status("Cálculo completado. Mostrando resultados.")
-            self._update_frame()
+            self.set_status(self._("analysis_completed"))
+            self._update_display()
 
     def toggle_camera(self) -> None:
-        if not self.is_camera_running:
-            self.start_capture()
-        else:
-            self.pause_capture()
-
-    def start_capture(self) -> None:
-        if not self.is_camera_running:
-            try:
-                self.camera.start()
-                self.is_camera_running = True
-                self.is_showing_analysis = False 
-                self.btn_toggle_camera.config(text="Pause Camera")
-                self.set_status("Cámara iniciada correctamente.")
-                self._update_frame()
-            except Exception as e:
-                self.set_status(f"Error al iniciar la cámara: {e}", is_error=True)
-                
-    def pause_capture(self) -> None:
-        if self.is_camera_running:
-            try:
-                self.camera.pause()
-            except Exception:
-                pass
-            self.is_camera_running = False
-            self.btn_toggle_camera.config(text="Resume Camera")
-            self.set_status("Cámara pausada.")
-
-    def stop_capture(self) -> None:
-        if self.is_camera_running:
-            self.pause_capture()
+        """Toggles the camera state and updates the button text."""
         try:
-            self.camera.stop()
-        except Exception:
-            pass
-    
+            self.camera_controller.toggle()
+            if self.camera_controller.is_running:
+                self.btn_toggle_camera.config(text=self._("pause_camera_button"))
+                self.set_status(self._("camera_started"))
+                self.is_showing_analysis = False
+            else:
+                self.btn_toggle_camera.config(text=self._("resume_camera_button"))
+                self.set_status(self._("camera_paused"))
+        except Exception as e:
+            self.set_status(self._("camera_error", error=e), is_error=True)
+
     def _update_frame(self) -> None:
-        """Actualiza el contenido del canvas"""
-        
-        # Mostrar Resultado de Análisis
+        """Periodically updates the frame from the camera."""
+        if self.camera_controller.is_running:
+            frame_data: Optional[FrameData] = self.camera_controller.get_frame()
+            if frame_data is not None:
+                denoised_frame: np.ndarray = self.preprocessor.denoise(frame_data.image)
+                self._last_frame = denoised_frame
+                self._update_canvas_image(denoised_frame)
+
+                if (
+                    self.plot3d_window
+                    and self.plot3d_window.winfo_exists()
+                    and self.selected_region is not None
+                ):
+                    # Unpack the tuple returned by the helper
+                    self.plot3d_window.set_latest_data(*self._prepare_3d_plot_data())
+
+        self.after(15, self._update_frame)
+
+    def _prepare_3d_plot_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Helper to prepare data for the 3D plot."""
+        if self.selected_region is None or self._last_frame is None:
+            # This should ideally not be called
+            # if selected_region or _last_frame is None,
+            # but as a safeguard, return empty arrays or raise an error.
+            # For now, returning empty arrays.
+            return np.array([]), np.array([]), np.array([])
+
+        x1, y1, x2, y2 = self.selected_region
+        h, w, _ = self._last_frame.shape
+        canvas_w, canvas_h = self.canvas.winfo_width(), self.canvas.winfo_height()
+
+        rx1 = int(x1 * w / canvas_w)
+        rx2 = int(x2 * w / canvas_w)
+        ry1 = int(y1 * h / canvas_h)
+        ry2 = int(y2 * h / canvas_h)
+
+        region_data = self._last_frame[ry1:ry2, rx1:rx2]
+        if region_data.size == 0:
+            return np.array([]), np.array([]), np.array([])
+
+        gray_region: np.ndarray = cv2.cvtColor(region_data, cv2.COLOR_RGB2GRAY)
+
+        try:
+            z_factor: float = self.analysis_panel.get_z_factor()
+        except ValueError:
+            z_factor = 1.0
+
+        rows, cols = gray_region.shape
+        x = np.arange(0, cols, 1)
+        y = np.arange(0, rows, 1)
+        X, Y = np.meshgrid(x, y)
+        Z = gray_region * z_factor
+        return X, Y, Z
+
+    def _update_3d_plot_live(self) -> None:
+        """
+        Extracts data from the selected region and sends it to the 3D plot window
+        for live update.
+        """
+        if self.selected_region is None or self._last_frame is None:
+            return
+
+        x1, y1, x2, y2 = self.selected_region
+        h, w, _ = self._last_frame.shape
+        canvas_w, canvas_h = self.canvas.winfo_width(), self.canvas.winfo_height()
+
+        rx1 = int(x1 * w / canvas_w)
+        rx2 = int(x2 * w / canvas_w)
+        ry1 = int(y1 * h / canvas_h)
+        ry2 = int(y2 * h / canvas_h)
+
+        region_data = self._last_frame[ry1:ry2, rx1:rx2]
+        if region_data.size == 0:
+            if self.plot3d_window:
+                self.plot3d_window.clear_plot_data()
+            return
+
+        gray_region: np.ndarray = cv2.cvtColor(region_data, cv2.COLOR_RGB2GRAY)
+
+        try:
+            z_factor: float = self.analysis_panel.get_z_factor()
+        except ValueError:
+            z_factor = 1.0
+
+        rows, cols = gray_region.shape
+        x = np.arange(0, cols, 1)
+        y = np.arange(0, rows, 1)
+        X, Y = np.meshgrid(x, y)
+        Z = gray_region * z_factor
+
+        if self.plot3d_window:
+            self.plot3d_window.set_latest_data(X, Y, Z)
+
+    def _update_canvas_image(self, frame: np.ndarray) -> None:
+        """Updates the canvas with a new camera frame."""
+        w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
+        if w > 1 and h > 1:
+            resized: np.ndarray = cv2.resize(
+                frame, (w, h), interpolation=cv2.INTER_AREA
+            )
+            img: Image.Image = Image.fromarray(cv2.cvtColor(resized, cv2.COLOR_BGR2RGB))
+            self.photo = ImageTk.PhotoImage(image=img)
+            self._update_display()
+
+    def _update_display(self) -> None:
+        """Updates the canvas content based on the current state."""
+        current_photo: Optional[ImageTk.PhotoImage] = None
         if self.is_showing_analysis and self._analysis_result_photo:
-            self.canvas.delete("camera_frame") 
+            current_photo = self._analysis_result_photo
+        elif self.camera_controller.started_once and self.photo:
+            current_photo = self.photo
+        else:
+            self._update_initial_canvas_message()
+            return
+
+        if current_photo:
             if self._canvas_image_id is None:
                 self._canvas_image_id = self.canvas.create_image(
-                    0, 0, 
-                    image=self._analysis_result_photo, 
-                    anchor=tk.NW, 
-                    tags="analysis_result"
+                    0, 0, image=current_photo, anchor=tk.NW
                 )
             else:
-                self.canvas.itemconfig(
-                    self._canvas_image_id, 
-                    image=self._analysis_result_photo, 
-                    tags="analysis_result"
-                )
-            self.canvas.delete("selection")
+                self.canvas.itemconfig(self._canvas_image_id, image=current_photo)
 
-        # Mostrar Cámara en Vivo
-        elif self.is_camera_running:
-            frame = self.camera.get_frame()
-            if frame is not None:
-                try:
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                except Exception:
-                    pass
-
-                w = max(1, self.canvas.winfo_width())
-                h = max(1, self.canvas.winfo_height())
-                
-                resized = cv2.resize(frame, (w, h), interpolation=cv2.INTER_AREA)
-                img = Image.fromarray(resized)
-                self.photo = ImageTk.PhotoImage(image=img)
-
-                self.canvas.delete("analysis_result") 
-                if self._canvas_image_id is None:
-                    self._canvas_image_id = self.canvas.create_image(
-                        0, 0, image=self.photo, anchor=tk.NW, tags="camera_frame"
-                    )
-                else:
-                    self.canvas.itemconfig(self._canvas_image_id, image=self.photo, tags="camera_frame")
-                
-                # Redibujar la selección
-                self.canvas.delete("selection")
-                if self.selected_region:
-                    x1, y1, x2, y2 = self.selected_region
-                    # Color de selección mejorado 
-                    self.canvas.create_rectangle(
-                        x1, y1, x2, y2,
-                        outline="#FFD34D",  
-                        width=2,
-                        dash=(4, 2),
-                        tags="selection",
-                    )
-        
-        # Reprogramar la actualización
-        if self.is_camera_running or self.is_showing_analysis:
-            self.after(15, self._update_frame)
-        else:
-            # Pantalla de inicio/inactiva
-            self.canvas.delete(tk.ALL)
-            w = self.canvas.winfo_width()
-            h = self.canvas.winfo_height()
-            
-            if w > 100 and h > 100:
-                self.canvas.create_text(
-                    w/2, h/2, 
-                    text="Haz clic en 'Open Camera' para comenzar",
-                    fill="#E6E6E6",  
-                    font=("Arial", 16),
-                    justify="center",
-                    width=w-40
-                )
-
-    # ==================== EVENTOS DEL MOUSE ====================
-
-    def _on_click(self, event):
-        if not self.is_camera_running and not self.is_showing_analysis:
-            self.set_status("Inicia la cámara primero o carga un análisis previo.", is_error=True)
-            return
-        
-        self.selection_start = (event.x, event.y)
-        self.canvas.delete("selection")
-        self.set_status(f"Clic en: ({event.x}, {event.y}). Arrastra para seleccionar.")
-
-    def _on_drag(self, event):
-        if self.selection_start:
-            x1, y1 = self.selection_start
-            x2, y2 = event.x, event.y
-            
-            # Eliminar selección anterior
-            self.canvas.delete("selection")
-            
-            # Dibujar nueva selección
-            self.selection_rect_id = self.canvas.create_rectangle(
-                x1, y1, x2, y2,
-                outline="#FFD34D",  
-                width=2,
-                dash=(3, 2),
-                tags="selection",
+    def _update_initial_canvas_message(self) -> None:
+        """Displays the initial message on the canvas."""
+        self.canvas.delete(tk.ALL)
+        w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
+        if w > 100 and h > 100:
+            self.canvas.create_text(
+                w / 2,
+                h / 2,
+                text=self._("click_to_start"),
+                fill="#E6E6E6",
+                font=("Arial", 16),
+                justify="center",
+                width=w - 40,
             )
 
-    def _on_release(self, event):
-        """Manejador para liberación del mouse - Fase 3"""
-        if self.selection_start:
-            x1, y1 = self.selection_start
-            x2, y2 = event.x, event.y
-            
-            # Ordenar coordenadas
-            x1, x2 = sorted([x1, x2])
-            y1, y2 = sorted([y1, y2])
-            
-            # Validar tamaño mínimo 
-            min_size = 10
-            if (x2 - x1) < min_size or (y2 - y1) < min_size:
-                self.set_status(
-                    f"Selección muy pequeña. Mínimo {min_size}×{min_size} píxeles.",
-                    is_error=True
-                )
-                self.canvas.delete("selection")
-                self.selection_start = None
-                return
-            
-            self.selected_region = (x1, y1, x2, y2)
-            self.selection_start = None
-            
-            # Feedback visual mejorado
-            width = x2 - x1
-            height = y2 - y1
-            self.set_status(f"✅ Región seleccionada: {width}×{height} píxeles")
-
     def _on_exit(self) -> None:
-        """Maneja el cierre seguro de la ventana - FIX: Cambiado de on_exit a _on_exit"""
-        self.set_status("Cerrando aplicación...")
-        self.stop_capture()
+        """Handles the safe closing of the window."""
+        self.set_status(self._("closing_app"))
+        self.camera_controller.stop()
+        self.task_queue.stop()
+        if self.plot3d_window and self.plot3d_window.winfo_exists():
+            self.plot3d_window.stop_live_update()
+            self.plot3d_window.destroy()
         self.destroy()
 
     def run(self) -> None:
-        """Inicia el loop principal de la aplicación"""
+        """Starts the main loop of the application."""
         self.mainloop()

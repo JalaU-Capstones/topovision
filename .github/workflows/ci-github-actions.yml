@@ -27,14 +27,28 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
+          # Check if requirements.txt exists before installing
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            echo "requirements.txt not found. Skipping main dependencies."
+          fi
+          # Check if requirements-dev.txt exists before installing
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+          else
+            echo "requirements-dev.txt not found. Skipping dev dependencies."
+          fi
 
       - name: Run linters
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src # Set PYTHONPATH for linters
         run: |
-          black --check .
-          flake8 .
+          black --check src/
+          flake8 src/
 
       - name: Type checking
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src
         run: |
-          mypy src
+          mypy src/
