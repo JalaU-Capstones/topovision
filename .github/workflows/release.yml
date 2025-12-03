@@ -47,7 +47,7 @@ jobs:
         path: downloaded-dist
 
     - name: Publish to PyPI
-      if: github.event_name == 'release' && github.event.action == 'published'
+      if: github.event_name == 'create' && startsWith(github.ref, 'refs/tags/v')
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
