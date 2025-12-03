@@ -378,7 +378,7 @@ class MainWindow(Tk):
         self.is_showing_analysis = not self.is_showing_analysis
         view_state = "analysis" if self.is_showing_analysis else "camera"
         self.set_status(self._(f"view_changed_to_{view_state}"))
-        self._update_display()
+        self._refresh_gui_display()
 
     def display_result_image(self, pil_image: Image.Image) -> None:
         """Displays a result image on the canvas."""
@@ -388,7 +388,7 @@ class MainWindow(Tk):
             self._analysis_result_photo = ImageTk.PhotoImage(image=resized_img)
             self.is_showing_analysis = True
             self.set_status(self._("analysis_completed"))
-            self._update_display()
+            self._refresh_gui_display()
 
     def toggle_camera(self) -> None:
         """Toggles the camera state and updates the button text."""
@@ -407,11 +407,9 @@ class MainWindow(Tk):
     def _update_frame(self) -> None:
         """Periodically updates the frame from the camera."""
         if self.camera_controller.is_running:
-            frame_data: Optional[FrameData] = self.camera_controller.get_frame()
-            if frame_data is not None:
-                denoised_frame: np.ndarray = self.preprocessor.process(
-                    frame_data.image
-                )  # Changed .denoise to .process
+            frame: Optional[np.ndarray] = self.camera_controller.get_frame()
+            if frame is not None:
+                denoised_frame: np.ndarray = self.preprocessor.process(frame)
                 self._last_frame = denoised_frame
                 self._update_canvas_image(denoised_frame)
 
@@ -509,9 +507,9 @@ class MainWindow(Tk):
             )
             img: Image.Image = Image.fromarray(cv2.cvtColor(resized, cv2.COLOR_BGR2RGB))
             self.photo = ImageTk.PhotoImage(image=img)
-            self._update_display()
+            self._refresh_gui_display()
 
-    def _update_display(self) -> None:
+    def _refresh_gui_display(self) -> None:
         """Updates the canvas content based on the current state."""
         current_photo: Optional[ImageTk.PhotoImage] = None
         if self.is_showing_analysis and self._analysis_result_photo:

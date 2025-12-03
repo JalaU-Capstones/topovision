@@ -6,36 +6,12 @@ including starting, pausing, and stopping the video feed.
 """
 
 import logging
-from typing import Callable, Optional, Protocol
+from typing import Callable, Optional
 
 import numpy as np
 
-
-# Define ICamera as a Protocol for type checking
-class ICamera(Protocol):
-    def start(self) -> None: ...
-
-    def pause(self) -> None: ...
-
-    def stop(self) -> None: ...
-
-    def resume(self) -> None: ...
-
-    def get_frame(self) -> Optional[np.ndarray]: ...
-
-
-try:
-    # Attempt to import the concrete ICamera implementation
-    # We import it under a different name to avoid redefinition issues with the Protocol
-    from topovision.core.interfaces import ICamera as ConcreteICamera
-
-    # At runtime, if ConcreteICamera is available, we can use it.
-    # For type checking, the ICamera Protocol is what matters for CameraController.
-except ImportError:
-    logging.warning(
-        "Could not import topovision.core.interfaces.ICamera. "
-        "Ensure concrete camera implementations are available if not using mock."
-    )
+from topovision.core.interfaces import ICamera as ConcreteICamera
+from topovision.core.models import FrameData
 
 
 class CameraController:
@@ -46,16 +22,21 @@ class CameraController:
     the underlying state management for starting, pausing, and stopping.
     """
 
-    def __init__(self, camera: ICamera, update_callback: Callable[[np.ndarray], None]):
+    def __init__(
+        self, camera: ConcreteICamera, update_callback: Callable[[np.ndarray], None]
+    ):
         """
         Initializes the CameraController.
 
         Args:
-            camera (ICamera): The camera instance to control.
+            camera (ConcreteICamera): The camera instance to control.
             update_callback (Callable[[np.ndarray], None]): A callback to be invoked
                 with the latest frame for UI updates.
         """
-        # The type checker will ensure 'camera' conforms to ICamera Protocol.
+        if not isinstance(camera, ConcreteICamera):
+            raise TypeError(
+                "The provided camera object does not implement the ICamera interface."
+            )
         self.camera = camera
         self._update_callback = update_callback
         self._is_running = False
@@ -137,4 +118,7 @@ class CameraController:
         """
         if not self._is_running:
             return None
-        return self.camera.get_frame()
+        frame_data: Optional[FrameData] = self.camera.get_frame()
+        if frame_data:
+            return frame_data.image
+        return None

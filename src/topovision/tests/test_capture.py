@@ -4,7 +4,7 @@ Unit tests for camera capture and control.
 
 import time
 import unittest
-from typing import Optional  # Import Optional
+from typing import Optional
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -107,7 +107,7 @@ class TestCameraController(unittest.TestCase):
         time.sleep(0.1)  # Allow time for a frame to be "generated"
         frame = self.controller.get_frame()
         self.assertIsNotNone(frame)
-        self.assertIsInstance(frame, FrameData)
+        self.assertIsInstance(frame, np.ndarray)  # Changed from FrameData to np.ndarray
 
     def test_get_frame_when_paused(self) -> None:
         """Test that get_frame returns None when paused."""
@@ -125,7 +125,7 @@ class TestCameraController(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             CameraController(
-                camera=BadCamera(),  # type: ignore[arg-type]
+                camera=BadCamera(),  # type: ignore[arg-type] # Re-added type ignore for mypy
                 update_callback=self.update_callback,
             )
 
