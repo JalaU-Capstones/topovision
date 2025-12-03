@@ -9,27 +9,10 @@ import cv2
 import numpy as np
 from numpy.typing import NDArray
 
-
-class IPreprocessor(ABC):
-    """
-    Abstract interface for an image pre-processing filter.
-    """
-
-    @abstractmethod
-    def process(self, image: NDArray[np.uint8]) -> NDArray[np.uint8]:
-        """
-        Applies a pre-processing step to an image.
-
-        Args:
-            image (NDArray[np.uint8]): The input image.
-
-        Returns:
-            NDArray[np.uint8]: The processed image.
-        """
-        raise NotImplementedError
+from topovision.core.interfaces import IPreprocessor  # Import IPreprocessor
 
 
-class DenoisingStrategy(IPreprocessor):
+class DenoisingStrategy(IPreprocessor):  # Inherit from IPreprocessor
     """
     An abstract base class for different denoising strategies.
     """
@@ -63,6 +46,9 @@ class GaussianBlurStrategy(DenoisingStrategy):
         self.kernel_size = kernel_size
 
     def process(self, image: NDArray[np.uint8]) -> NDArray[np.uint8]:
+        """
+        Applies a pre-processing step to an image using Gaussian blur.
+        """
         return cv2.GaussianBlur(image, self.kernel_size, 0)
 
 
@@ -87,26 +73,30 @@ class MedianBlurStrategy(DenoisingStrategy):
         self.kernel_size = kernel_size
 
     def process(self, image: NDArray[np.uint8]) -> NDArray[np.uint8]:
+        """
+        Applies a pre-processing step to an image using median blur.
+        """
         return cv2.medianBlur(image, self.kernel_size)
 
 
-class ImagePreprocessor:
+class ImagePreprocessor(IPreprocessor):  # Inherit from IPreprocessor
     """
     A class to handle image preprocessing tasks using a selected strategy.
     """
 
-    def __init__(self, strategy: DenoisingStrategy):
+    def __init__(self, strategy: IPreprocessor):  # Type hint changed to IPreprocessor
         """
         Initializes the ImagePreprocessor with a specific denoising strategy.
 
         Args:
-            strategy (DenoisingStrategy): The denoising strategy to use.
+            strategy (IPreprocessor): The denoising strategy to use.
         """
-        if not isinstance(strategy, DenoisingStrategy):
-            raise TypeError("The provided strategy is not a valid DenoisingStrategy.")
+        # The type checker will ensure 'strategy' conforms to IPreprocessor.
         self.strategy = strategy
 
-    def denoise(self, frame: NDArray[np.uint8]) -> NDArray[np.uint8]:
+    def process(
+        self, frame: NDArray[np.uint8]
+    ) -> NDArray[np.uint8]:  # Renamed from denoise to process
         """
         Applies the selected denoising strategy to the image.
 

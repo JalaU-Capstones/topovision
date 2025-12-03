@@ -68,7 +68,8 @@ def generate_heatmap(
     plt.setp(plt.getp(cbar.ax.axes, "yticklabels"), color=TEXT_COLOR, fontsize=8)
 
     # 4. Set descriptive label using the translator
-    cbar.set_label(_(label_key), color=TEXT_COLOR, fontsize=9)
+    translated_label = _(label_key)  # Call translator explicitly
+    cbar.set_label(translated_label, color=TEXT_COLOR, fontsize=9)
 
     plt.tight_layout(pad=0.5)
 

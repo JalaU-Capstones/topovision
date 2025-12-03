@@ -409,7 +409,9 @@ class MainWindow(Tk):
         if self.camera_controller.is_running:
             frame_data: Optional[FrameData] = self.camera_controller.get_frame()
             if frame_data is not None:
-                denoised_frame: np.ndarray = self.preprocessor.denoise(frame_data.image)
+                denoised_frame: np.ndarray = self.preprocessor.process(
+                    frame_data.image
+                )  # Changed .denoise to .process
                 self._last_frame = denoised_frame
                 self._update_canvas_image(denoised_frame)
 
