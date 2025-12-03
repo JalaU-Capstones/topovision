@@ -2,6 +2,7 @@
 
 from topovision.capture.capture_module import OpenCVCamera
 from topovision.gui.gui_module import MainWindow
+from topovision.capture.camera_backends import OpenCVCamera, MockCamera
 
 
 def main() -> None:
