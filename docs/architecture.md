@@ -53,45 +53,48 @@ to ensure modularity and testability.
 
 src/topovision/
 ├── app.py                       # Application entry point (Facade pattern)
+├── exceptions.py                # Custom exception types
 │
 ├── core/                        # Core contracts and domain models
 │   ├── interfaces.py             # Abstract base classes for modules
-│   ├── models.py                 # Data structures (dataclasses)
-│   ├── exceptions.py             # Custom exception types
+│   └── models.py                 # Data structures (dataclasses)
 │
 ├── capture/                     # Camera and preprocessing modules
-│   ├── capture_module.py         # Capture orchestration
-│   ├── camera_backends.py        # Backend implementations (OpenCV, Mock)
-│   ├── preprocessing.py          # Image normalization, grayscale, filters
+│   ├── capture_module.py         # Capture orchestration and camera implementations (OpenCV, Mock)
+│   └── preprocessing.py          # Image normalization, grayscale, filters
 │
 ├── calculus/                    # Mathematical processing (core logic)
 │   ├── calculus_module.py        # Coordinates data and computation
-│   └── methods/                  # Mathematical submodules
-│       ├── finite_diff.py        # Partial derivatives
-│       ├── gradient.py           # Gradient vector calculation
-│       └── riemann.py            # Double integration via Riemann sums
+│   └── strategies.py             # Mathematical strategies/algorithms
 │
 ├── visualization/               # Rendering and graphical representation
-│   ├── visualization_module.py   # Integration point with GUI
+│   ├── plot3d.py                 # 3D plotting utilities
 │   ├── heatmap.py                # Surface heatmap visualization
-│   └── vector_overlay.py         # Gradient vector arrows overlay
+│   ├── overlay.py                # Overlay functionalities
+│   └── visualizers.py            # Integration point with GUI and various visualizers
 │
 ├── gui/                         # User Interface (Tkinter-based)
-│   └── gui_module.py             # Main GUI window and event handlers
+│   ├── gui_module.py             # Main GUI window and event handlers
+│   ├── i18n.py                   # Internationalization utilities
+│   ├── theme.py                  # GUI theming
+│   ├── canvas_panel.py           # Canvas for displaying visualizations
+│   ├── plot3d_window.py          # Dedicated window for 3D plots
+│   ├── analysis_panel.py         # Panel for analysis controls and display
+│   └── camera_controller.py      # Controls for camera settings
 │
 ├── services/                    # Supporting services
-│   ├── cache.py                  # In-memory data caching
-│   ├── task_queue.py             # Background processing or async queue
+│   ├── service_provider.py       # Manages and provides services
+│   └── task_queue.py             # Background processing or async queue
 │
 ├── utils/                       # Helper utilities
-│   └── validators.py             # Input validation and format checks
+│   └── math.py                   # Mathematical helper functions
 │
 └── tests/                       # Unit and integration tests
-├── test_capture.py
-├── test_calculus.py
-└── test_visualization.py
+    ├── test_capture.py
+    ├── test_calculus.py
+    └── test_visualization.py
 
-````
+```
 
 ---
 
@@ -100,14 +103,15 @@ src/topovision/
 | Module | Responsibility |
 |---------|----------------|
 | **app.py** | Entry point using the **Facade pattern**. Initializes dependencies, modules, and launches GUI. |
+| **exceptions.py** | Defines custom exception types for robust error handling. |
 | **core/interfaces.py** | Defines abstract interfaces (e.g., `ICamera`, `IVisualizer`, `ICalculusModule`). |
 | **core/models.py** | Contains data classes like `FrameData`, `GradientResult`, etc. |
-| **capture/** | Responsible for acquiring and preprocessing image frames. |
-| **calculus/** | Implements mathematical analysis (partial derivatives, gradients, surface integration). |
-| **visualization/** | Renders analytical results (heatmaps, vector fields). |
-| **gui/** | Manages user interaction through Tkinter. |
-| **services/** | Provides support utilities like caching and asynchronous tasks. |
-| **utils/** | Contains lightweight helper functions for validation and formatting. |
+| **capture/** | Responsible for acquiring and preprocessing image frames, including camera implementations. |
+| **calculus/** | Implements mathematical analysis (partial derivatives, gradients, surface integration) and defines calculation strategies. |
+| **visualization/** | Renders analytical results (heatmaps, vector fields, 3D plots) and manages visualizers. |
+| **gui/** | Manages user interaction through Tkinter, including panels, windows, and internationalization. |
+| **services/** | Provides support utilities like service management and asynchronous tasks. |
+| **utils/** | Contains lightweight mathematical helper functions. |
 
 ---
 
@@ -130,7 +134,7 @@ src/topovision/
        ▼
  [ GUI ]
  (User Interaction, Display, Input)
-````
+```
 
 ### Example Workflow:
 

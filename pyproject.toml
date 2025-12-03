@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "topovision"
-version = "0.1.0"
+version = "0.1.1"
 description = "TopoVision - 3D Topographic Analysis System for Calculus II"
 authors = [
     { name = "TopoVision Team", email = "code.with.botina@gmail.com" }

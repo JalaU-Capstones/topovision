@@ -74,10 +74,40 @@ pre-commit install
 
 ## ▶️ 4. Running TopoVision
 
-Once installed, simply run:
+There are a few ways to run TopoVision, depending on how you installed it and your operating system.
+
+### Option 1: Using the provided scripts (Recommended for repository clones)
+
+If you cloned the repository and followed the installation steps, you can use the convenience scripts:
+
+**On Linux/macOS:**
+```bash
+./run.sh
+```
+
+**On Windows:**
+```bash
+.\run.bat
+```
+
+These scripts will activate your virtual environment and launch the application.
+
+### Option 2: Directly from the command line (After `pip install`)
+
+If you installed TopoVision via `pip install topovision` (either from PyPI or in editable mode), you can run it directly:
 
 ```bash
-python -m src.topovision.app
+topovision
+```
+
+This command leverages the entry point defined in the project's `pyproject.toml`.
+
+### Option 3: Running the main module (Advanced)
+
+For development or debugging, you can also run the main module directly from the `src` directory, ensuring your virtual environment is active:
+
+```bash
+python -m topovision
 ```
 
 If everything is configured correctly, a **Tkinter window** will appear with the following interface:
@@ -112,10 +142,11 @@ If everything is configured correctly, a **Tkinter window** will appear with the
    * Integrals are approximated via **Riemann sums**.
 
 4. **Visualization**
-   The processed data is displayed as:
+   The processed data is dynamically displayed through various visualizations:
 
-   * A **heatmap** representing height/intensity levels.
-   * **Vector arrows** showing the direction and magnitude of the gradient.
+   *   **2D Heatmaps:** A color-coded representation of height or intensity levels on a flat image plane.
+   *   **Gradient Vector Fields:** Overlays showing the direction and magnitude of the steepest ascent (gradient) using vector arrows.
+   *   **3D Surface Plots:** An interactive three-dimensional rendering of the terrain's surface, providing a comprehensive view of its topography.
 
 5. **Interaction**
    Users can select regions or points directly on the GUI to analyze specific areas.
@@ -124,15 +155,26 @@ If everything is configured correctly, a **Tkinter window** will appear with the
 
 ## 🖱️ 6. User Interface Controls
 
-| Button                       | Description                                               |
-| ---------------------------- | --------------------------------------------------------- |
-| **Open Camera**              | Starts the camera feed and begins processing.             |
-| **Pause** *(future)*         | Temporarily freezes the analysis.                         |
-| **Exit**                     | Safely stops all processes and closes the app.            |
-| **Select Region** *(future)* | Allows users to define a custom ROI (region of interest). |
+TopoVision's graphical user interface (GUI) provides intuitive controls for interacting with the system.
 
-💡 *Note:* During the early prototype (Phase 1–2), only “Open Camera” and “Exit” are active.
-Other buttons will be enabled in later phases.
+| Button                       | Description                                                                                             |
+| :--------------------------- | :------------------------------------------------------------------------------------------------------ |
+| **Open Camera**              | Initiates the camera feed, starts real-time image processing, and begins the topographic analysis.      |
+| **Pause** *(future)*         | Temporarily freezes the analysis and camera feed, allowing for detailed inspection of a static frame.   |
+| **Exit**                     | Safely terminates all running processes, closes the camera, and exits the application.                  |
+| **Select Region** *(future)* | Enables users to define a custom Region of Interest (ROI) on the camera feed for focused analysis.      |
+
+💡 *Note:* During the early prototype (Phase 1–2), only the “Open Camera” and “Exit” buttons are fully functional. Additional features will be enabled in subsequent development phases.
+
+### Interactive 3D Plot Controls
+
+When a 3D surface plot is displayed (e.g., in a separate window or embedded within the GUI), you can interact with it using standard `matplotlib` controls:
+
+*   **Rotate:** Click and drag the plot with your mouse to change the viewing angle and perspective.
+*   **Zoom:** Use the scroll wheel on your mouse to zoom in and out of the plot.
+*   **Pan:** Hold down the `Shift` key (or sometimes `Ctrl` or `Alt`, depending on your OS and `matplotlib` backend) and click-and-drag to move the plot horizontally and vertically within the display area.
+
+These interactive controls allow for a comprehensive exploration of the 3D topographic data, enabling users to examine specific features and understand the surface's geometry from various viewpoints.
 
 ---
 
