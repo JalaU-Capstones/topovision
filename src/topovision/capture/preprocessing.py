@@ -4,6 +4,7 @@ to improve the quality of frames before analysis.
 """
 
 from abc import ABC, abstractmethod
+from typing import cast
 
 import cv2
 import numpy as np
@@ -49,7 +50,7 @@ class GaussianBlurStrategy(DenoisingStrategy):
         """
         Applies a pre-processing step to an image using Gaussian blur.
         """
-        return cv2.GaussianBlur(image, self.kernel_size, 0)
+        return cast(NDArray[np.uint8], cv2.GaussianBlur(image, self.kernel_size, 0))
 
 
 class MedianBlurStrategy(DenoisingStrategy):
@@ -76,7 +77,7 @@ class MedianBlurStrategy(DenoisingStrategy):
         """
         Applies a pre-processing step to an image using median blur.
         """
-        return cv2.medianBlur(image, self.kernel_size)
+        return cast(NDArray[np.uint8], cv2.medianBlur(image, self.kernel_size))
 
 
 class ImagePreprocessor(IPreprocessor):  # Inherit from IPreprocessor

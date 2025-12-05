@@ -6,9 +6,10 @@ including starting, pausing, and stopping the video feed.
 """
 
 import logging
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 import numpy as np
+from numpy.typing import NDArray
 
 from topovision.core.interfaces import ICamera as ConcreteICamera
 from topovision.core.models import FrameData
@@ -23,14 +24,16 @@ class CameraController:
     """
 
     def __init__(
-        self, camera: ConcreteICamera, update_callback: Callable[[np.ndarray], None]
+        self,
+        camera: ConcreteICamera,
+        update_callback: Callable[[NDArray[Any]], None],  # Changed to NDArray[Any]
     ):
         """
         Initializes the CameraController.
 
         Args:
             camera (ConcreteICamera): The camera instance to control.
-            update_callback (Callable[[np.ndarray], None]): A callback to be invoked
+            update_callback (Callable[[NDArray[Any]], None]): A callback to be invoked
                 with the latest frame for UI updates.
         """
         if not isinstance(camera, ConcreteICamera):
@@ -72,7 +75,6 @@ class CameraController:
             raise
 
     def pause(self) -> None:
-        """Pauses the camera feed."""
         if not self._is_running:
             return
 
@@ -85,7 +87,6 @@ class CameraController:
             raise
 
     def stop(self) -> None:
-        """Stops the camera feed and releases resources."""
         if not self._started_once:
             return
 
@@ -108,12 +109,12 @@ class CameraController:
         else:
             self.start()
 
-    def get_frame(self) -> Optional[np.ndarray]:
+    def get_frame(self) -> Optional[NDArray[Any]]:  # Changed to NDArray[Any]
         """
         Retrieves the latest frame from the camera.
 
         Returns:
-            Optional[np.ndarray]: The frame as a NumPy array, or None if no
+            Optional[NDArray[Any]]: The frame as a NumPy array, or None if no
             frame is available or the camera is not running.
         """
         if not self._is_running:
