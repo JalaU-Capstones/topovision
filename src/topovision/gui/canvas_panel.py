@@ -2,32 +2,27 @@
 Canvas Panel for TopoVision.
 
 This module defines a custom Tkinter Canvas that allows users to select
-a rectangular region on top of the video feed or analysis results.
+a rectangular region or four points for calibration.
 """
 
 import tkinter as tk
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 
 class CanvasPanel(tk.Canvas):
     """
     A custom canvas for displaying video and handling user selections.
-
-    This canvas is responsible for:
-    - Drawing the video frames or analysis results.
-    - Allowing the user to draw a selection rectangle.
-    - Notifying a callback function when a selection is made.
     """
 
     MIN_SELECTION_SIZE = 10  # Minimum size for a valid selection
 
-    def __init__(self, parent: tk.Widget, **kwargs: Any):
+    def __init__(
+        self,
+        parent: tk.Widget,
+        **kwargs: Any,
+    ):
         """
         Initializes the CanvasPanel.
-
-        Args:
-            parent (tk.Widget): The parent widget.
-            **kwargs: Additional keyword arguments for the tk.Canvas.
         """
         super().__init__(parent, **kwargs)
 
@@ -35,56 +30,79 @@ class CanvasPanel(tk.Canvas):
         self._selection_rect_id: Optional[int] = None
         self.selected_region: Optional[Tuple[int, int, int, int]] = None
 
-        # The callback to be invoked when a selection is made or cleared.
-        # It receives the region, a message key, and optional format arguments.
-        self.on_selection_made: Optional[Callable[..., None]] = (
-            None  # Changed type hint
-        )
+        self.on_selection_made: Optional[Callable[..., None]] = None
+        self.on_calibration_point_added: Optional[
+            Callable[[List[Tuple[int, int]]], None]
+        ] = None
+
+        self.is_calibration_mode = False
+        self.calibration_points: List[Tuple[int, int]] = []
 
         self.bind("<ButtonPress-1>", self._on_press)
         self.bind("<B1-Motion>", self._on_drag)
         self.bind("<ButtonRelease-1>", self._on_release)
 
+    def start_calibration(self) -> None:
+        """Activates calibration mode, clearing only previous calibration points."""
+        self.is_calibration_mode = True
+        self.calibration_points = []
+        self.clear_selection()
+        self.delete("calibration_point")
+
+    def stop_calibration(self) -> None:
+        """Deactivates calibration mode."""
+        self.is_calibration_mode = False
+        self.delete("calibration_point")
+
     def _on_press(self, event: tk.Event) -> None:
-        """Handles the initial click to start a selection."""
-        self._selection_start = (event.x, event.y)
-        self.delete("selection")  # Clear any previous selection rectangle
+        """Handles the initial click."""
+        if self.is_calibration_mode:
+            if len(self.calibration_points) < 4:
+                self.calibration_points.append((event.x, event.y))
+                self._draw_calibration_point(event.x, event.y)
+                if self.on_calibration_point_added:
+                    self.on_calibration_point_added(self.calibration_points)
+        else:
+            self._selection_start = (event.x, event.y)
+            self.delete("selection")
+
+    def _draw_calibration_point(self, x: int, y: int) -> None:
+        """Draws a visual marker for a calibration point."""
+        self.create_oval(
+            x - 3,
+            y - 3,
+            x + 3,
+            y + 3,
+            fill="#FFD34D",
+            outline="white",
+            tags="calibration_point",
+        )
 
     def _on_drag(self, event: tk.Event) -> None:
-        """Handles dragging to draw or update the selection rectangle."""
-        if not self._selection_start:
+        """Handles dragging to draw a selection rectangle."""
+        if self.is_calibration_mode or not self._selection_start:
             return
 
         x1, y1 = self._selection_start
         x2, y2 = event.x, event.y
 
-        # Redraw the rectangle for immediate visual feedback
         self.delete("selection")
         self._selection_rect_id = self.create_rectangle(
-            x1,
-            y1,
-            x2,
-            y2,
-            outline="#FFD34D",
-            width=2,
-            dash=(3, 2),
-            tags="selection",
+            x1, y1, x2, y2, outline="#FFD34D", width=2, dash=(3, 2), tags="selection"
         )
 
     def _on_release(self, event: tk.Event) -> None:
-        """Finalizes the selection when the mouse button is released."""
-        if not self._selection_start:
+        """Finalizes the selection."""
+        if self.is_calibration_mode or not self._selection_start:
             return
 
         x1, y1 = self._selection_start
         x2, y2 = event.x, event.y
         self._selection_start = None
 
-        # Ensure the coordinates are ordered (top-left, bottom-right)
         x1, x2 = min(x1, x2), max(x1, x2)
         y1, y2 = min(y1, y2), max(y1, y2)
 
-        # Validate selection size
         if (x2 - x1) < self.MIN_SELECTION_SIZE or (y2 - y1) < self.MIN_SELECTION_SIZE:
             self.delete("selection")
             if self.on_selection_made:
@@ -96,10 +114,7 @@ class CanvasPanel(tk.Canvas):
         self.selected_region = (x1, y1, x2, y2)
 
         if self.on_selection_made:
-            width, height = x2 - x1, y2 - y1
-            self.on_selection_made(
-                self.selected_region, "selection_made", width=width, height=height
-            )
+            self.on_selection_made(self.selected_region, "selection_made")
 
     def clear_selection(self) -> None:
         """Clears the current selection rectangle and region data."""

@@ -2,9 +2,9 @@ name: Run Tests
 
 on:
   push:
-    branches: [ develop, main ]
+    branches: [ develop, main, release ]
   pull_request:
-    branches: [ develop, main ]
+    branches: [ develop, main, release ]
 
 jobs:
   test:
@@ -22,20 +22,18 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # Check if requirements.txt exists before installing
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          else
-            echo "requirements.txt not found. Skipping main dependencies."
-          fi
-          # Check if requirements-dev.txt exists before installing
-          if [ -f requirements-dev.txt ]; then
-            pip install -r requirements-dev.txt
-          else
-            echo "requirements-dev.txt not found. Skipping dev dependencies."
-          fi
+          # Install project in editable mode with dev dependencies from pyproject.toml
+          pip install -e ".[dev]"
 
-      - name: Run tests
+      - name: Run Flake8
+        run: |
+          flake8 src/topovision
+
+      - name: Run MyPy
+        run: |
+          mypy src/topovision
+
+      - name: Run Pytest
         env:
           PYTHONPATH: ${{ github.workspace }}/src
         run: pytest src/topovision/tests/ --maxfail=1 --disable-warnings -q
