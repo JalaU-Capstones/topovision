@@ -5,7 +5,7 @@
 
 # --- Testing and Coverage ---
 pytest==8.3.3             # Unit testing framework
-pytest-cov==5.0.0         # Test coverage reporting
+pytest-cov==7.0.0         # Test coverage reporting
 
 # --- Linting and Code Quality ---
 flake8==7.1.1             # Style and syntax checker
