@@ -26,19 +26,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          # Check if requirements.txt exists before installing
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          else
-            echo "requirements.txt not found. Skipping main dependencies."
-          fi
-          # Check if requirements-dev.txt exists before installing
-          if [ -f requirements-dev.txt ]; then
-            pip install -r requirements-dev.txt
-          else
-            echo "requirements-dev.txt not found. Skipping dev dependencies."
-          fi
+          python -m pip install --upgrade pip
+          # Install the project in editable mode with "dev" optional dependencies
+          pip install -e ".[dev]"
 
       - name: Run linters
         env:
