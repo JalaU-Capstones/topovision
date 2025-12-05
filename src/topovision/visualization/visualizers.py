@@ -1,84 +1,103 @@
 """
-Visualizers for TopoVision.
-
-This module provides concrete implementations of the IVisualizer interface
-to render analysis results, such as heatmaps, onto original images.
+This module defines visualizers for analysis results.
 """
 
+from typing import Optional
+
+import cv2
 import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
 
-from topovision.core.interfaces import IVisualizer
-from topovision.core.models import AnalysisResult, GradientResult, RegionOfInterest
-from topovision.gui.i18n import DEFAULT_LANG
-
-from .heatmap import generate_heatmap
-from .overlay import overlay_image
+from topovision.core.models import AnalysisResult, GradientResult
 
 
-class HeatmapVisualizer(IVisualizer):
+class HeatmapVisualizer:
     """
-    Visualizes gradient analysis results as a heatmap overlaid on an image.
+    A visualizer for creating heatmaps from analysis results.
     """
 
     def visualize(
         self,
         analysis_result: AnalysisResult,
         original_image: Image.Image,
+        inverse_matrix: Optional[NDArray[np.float64]] = None,
+        src_quad: Optional[NDArray[np.float32]] = None,
     ) -> Image.Image:
         """
-        Creates a heatmap visualization of the gradient analysis result
-        and overlays it onto the original image.
+        Generates a heatmap visualization for the given analysis result.
+        """
+        if isinstance(analysis_result.result_data, GradientResult):
+            return self._create_gradient_heatmap(
+                analysis_result, original_image, inverse_matrix, src_quad
+            )
+        return original_image
 
-        Args:
-            analysis_result (AnalysisResult): The result of the analysis,
-                                              expected to contain GradientResult.
-            original_image (Image.Image): The original image (PIL Image)
-                                          on which to overlay the visualization.
-
-        Returns:
-            Image.Image: The image with the heatmap visualization overlaid.
-
-        Raises:
-            ValueError: If the analysis_result is not a GradientResult.
+    def _create_gradient_heatmap(
+        self,
+        analysis_result: AnalysisResult,
+        original_image: Image.Image,
+        inverse_matrix: Optional[NDArray[np.float64]],
+        src_quad: Optional[NDArray[np.float32]],
+    ) -> Image.Image:
+        """
+        Creates a heatmap for a GradientResult, handling perspective correction.
         """
         if not isinstance(analysis_result.result_data, GradientResult):
-            # For now, if it's not a gradient, return the original image.
-            # Future visualizers could handle other types.
             return original_image
-            # raise ValueError("HeatmapVisualizer can only visualize GradientResult.")
 
-        gradient_data: GradientResult = analysis_result.result_data
-        region: RegionOfInterest = analysis_result.region
+        gradient_result = analysis_result.result_data
+        magnitude = gradient_result.magnitude
+        if magnitude is None:
+            return original_image
 
-        # Calculate magnitude from dz_dx and dz_dy
-        magnitude = np.sqrt(gradient_data.dz_dx**2 + gradient_data.dz_dy**2)
+        # Normalize the magnitude to the 0-255 range
+        if np.max(magnitude) > 0:
+            norm_magnitude = (
+                (magnitude - np.min(magnitude))
+                / (np.max(magnitude) - np.min(magnitude))
+                * 255
+            ).astype(np.uint8)
+        else:
+            norm_magnitude = np.zeros_like(magnitude, dtype=np.uint8)
 
-        # Generate the heatmap from the magnitude data
-        # The heatmap is generated for the size of the region data
-        # Pass label_key and lang for i18n
-        heatmap_pil = generate_heatmap(
-            magnitude,
-            cmap="plasma",
-            label_key="gradient_magnitude_label",
-            lang=DEFAULT_LANG,
-        )
+        heatmap_color = cv2.applyColorMap(norm_magnitude, cv2.COLORMAP_JET)
 
-        # Resize heatmap to match the selected region on the original image
-        # The region coordinates are relative to the original image
-        x1, y1, x2, y2 = region.x1, region.y1, region.x2, region.y2
+        if inverse_matrix is not None and src_quad is not None:
+            # Warp the heatmap back to the original image's perspective
+            warped_heatmap = cv2.warpPerspective(
+                heatmap_color,
+                inverse_matrix,
+                (original_image.width, original_image.height),
+            )
+            # Create a mask to blend only within the selected quad
+            mask = np.zeros_like(
+                np.array(original_image, dtype=np.uint8), dtype=np.uint8
+            )
+            cv2.fillConvexPoly(mask, np.int32(src_quad), (255, 255, 255))
+            mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
 
-        # Ensure target dimensions are positive
-        target_width = max(1, x2 - x1)
-        target_height = max(1, y2 - y1)
+            # Blend using the mask
+            original_np = cv2.cvtColor(np.array(original_image), cv2.COLOR_RGB2BGR)
+            blended_np = np.where(
+                mask[:, :, None] > 0,
+                cv2.addWeighted(original_np, 0.4, warped_heatmap, 0.6, 0),
+                original_np,
+            )
+            return Image.fromarray(cv2.cvtColor(blended_np, cv2.COLOR_BGR2RGB))
+        else:
+            # Original logic for rectangular selection without perspective
+            heatmap_pil = Image.fromarray(
+                cv2.cvtColor(heatmap_color, cv2.COLOR_BGR2RGB)
+            )
+            region = analysis_result.region
+            if heatmap_pil.size != (region.width, region.height):
+                heatmap_pil = heatmap_pil.resize((region.width, region.height))
 
-        heatmap_resized = heatmap_pil.resize(
-            (target_width, target_height), Image.Resampling.LANCZOS
-        )
-
-        # Make the heatmap semi-transparent for overlay
-        heatmap_resized.putalpha(128)
-
-        # Overlay the heatmap onto the original image at the specified region
-        return overlay_image(original_image, heatmap_resized, (x1, y1))
+            original_crop = original_image.crop(
+                (region.x1, region.y1, region.x2, region.y2)
+            )
+            blended_image = Image.blend(original_crop, heatmap_pil, alpha=0.6)
+            final_image = original_image.copy()
+            final_image.paste(blended_image, (region.x1, region.y1))
+            return final_image

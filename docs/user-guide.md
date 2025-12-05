@@ -1,4 +1,4 @@
-# 👨‍💻 TopoVision — User Guide
+# 👨‍💻 TopoVision — User Guide (v0.2.1)
 
 > **Purpose:**
 > This guide explains how to install, run, and use the **TopoVision 3D Topographic Analysis System**.
@@ -10,10 +10,11 @@
 
 **TopoVision** is an educational software designed to connect **multivariable calculus** with **visual topographic analysis**.
 
-It uses a standard webcam (or video input) to:
-- Capture surface or terrain data in real time,
-- Compute **gradients**, **partial derivatives**, and **surface integrals**,
-- Visualize the data through **color maps** and **vector fields**.
+It uses a standard webcam to:
+- Capture surface or terrain data in real time.
+- Compute **gradients**, **arc length**, and **surface volumes**.
+- Visualize the data through **heatmaps** and interactive **3D surface plots**.
+- Provide accurate, real-world measurements through **unit conversion** and **perspective calibration**.
 
 ---
 
@@ -31,229 +32,146 @@ It uses a standard webcam (or video input) to:
 
 ## ⚙️ 3. Installation Guide
 
-### 🪜 Step 1 — Clone the Repository
+### 📦 Installation from PyPI (Recommended)
 
 ```bash
+pip install topovision
+```
+
+### 🛠️ Installation from Source
+
+For developers who want to contribute or modify the code:
+
+```bash
+# Clone the repository
 git clone https://github.com/JalaU-Capstones/topovision.git
 cd topovision
-````
 
-### 🧱 Step 2 — Create a Virtual Environment
-
-```bash
+# Create a virtual environment
 python3.11 -m venv .venv
 source .venv/bin/activate       # On Linux/macOS
 # OR
 .venv\Scripts\activate          # On Windows
-```
 
-### 📦 Step 3 — Install Dependencies
-
-For full installation:
-
-```bash
-pip install -r requirements.txt
-```
-
-For lightweight environments:
-
-```bash
-pip install -r requirements-light.txt
-```
-
-### 🧪 Step 4 — (Optional) Install Development Tools
-
-If you plan to contribute:
-
-```bash
-pip install -r requirements-dev.txt
-pre-commit install
+# Install in editable mode with development dependencies
+pip install -e .[dev]
 ```
 
 ---
 
 ## ▶️ 4. Running TopoVision
 
-There are a few ways to run TopoVision, depending on how you installed it and your operating system.
-
-### Option 1: Using the provided scripts (Recommended for repository clones)
-
-If you cloned the repository and followed the installation steps, you can use the convenience scripts:
-
-**On Linux/macOS:**
-```bash
-./run.sh
-```
-
-**On Windows:**
-```bash
-.\run.bat
-```
-
-These scripts will activate your virtual environment and launch the application.
-
-### Option 2: Directly from the command line (After `pip install`)
-
-If you installed TopoVision via `pip install topovision` (either from PyPI or in editable mode), you can run it directly:
+After installation, you can run TopoVision from your terminal:
 
 ```bash
 topovision
 ```
 
-This command leverages the entry point defined in the project's `pyproject.toml`.
-
-### Option 3: Running the main module (Advanced)
-
-For development or debugging, you can also run the main module directly from the `src` directory, ensuring your virtual environment is active:
-
-```bash
-python -m topovision
-```
-
-If everything is configured correctly, a **Tkinter window** will appear with the following interface:
-
-```
-+-----------------------------------+
-|          🛰️  TOPOVISION           |
-|-----------------------------------|
-| [ Open Camera ]   [ Exit ]        |
-|                                   |
-|  (Live camera feed area)          |
-|                                   |
-+-----------------------------------+
-```
+The first time you run the application, an interactive tutorial will guide you through the initial steps.
 
 ---
 
-## 🧠 5. How It Works (Simplified)
+## 🧠 5. Interactive Tutorials
 
-### Step-by-step process:
+TopoVision includes a built-in tutorial system to guide first-time users. On your first interaction with a key feature, a message box will appear explaining its purpose and how to use it.
 
-1. **Camera Capture**
-   TopoVision connects to your webcam using **OpenCV** and starts reading frames.
+Tutorials are provided for:
+- **Initial Startup**: Guides you to open the camera.
+- **Analysis Panel**: Explains the purpose of the main control panel.
+- **Z-Factor**: Describes how height scaling works.
+- **Scale**: Explains how to set the pixels-per-meter ratio for measurements.
+- **Perspective Calibration**: Details how to correct for perspective distortion.
+- **Analysis Buttons**: Explains what each calculation does when you first click it.
 
-2. **Preprocessing**
-   Each frame is converted to grayscale and normalized to enhance contrast.
-
-3. **Mathematical Analysis**
-
-   * Partial derivatives are computed using **finite differences**.
-   * Gradient vectors are calculated and visualized.
-   * Integrals are approximated via **Riemann sums**.
-
-4. **Visualization**
-   The processed data is dynamically displayed through various visualizations:
-
-   *   **2D Heatmaps:** A color-coded representation of height or intensity levels on a flat image plane.
-   *   **Gradient Vector Fields:** Overlays showing the direction and magnitude of the steepest ascent (gradient) using vector arrows.
-   *   **3D Surface Plots:** An interactive three-dimensional rendering of the terrain's surface, providing a comprehensive view of its topography.
-
-5. **Interaction**
-   Users can select regions or points directly on the GUI to analyze specific areas.
+Your progress is saved in `user_settings.json` in the project's root directory, so tutorials are only shown once.
 
 ---
 
 ## 🖱️ 6. User Interface Controls
 
-TopoVision's graphical user interface (GUI) provides intuitive controls for interacting with the system.
+The main window is divided into the **Canvas** (left) and the **Analysis Panel** (right).
 
-| Button                       | Description                                                                                             |
-| :--------------------------- | :------------------------------------------------------------------------------------------------------ |
-| **Open Camera**              | Initiates the camera feed, starts real-time image processing, and begins the topographic analysis.      |
-| **Pause** *(future)*         | Temporarily freezes the analysis and camera feed, allowing for detailed inspection of a static frame.   |
-| **Exit**                     | Safely terminates all running processes, closes the camera, and exits the application.                  |
-| **Select Region** *(future)* | Enables users to define a custom Region of Interest (ROI) on the camera feed for focused analysis.      |
+### Analysis Panel
 
-💡 *Note:* During the early prototype (Phase 1–2), only the “Open Camera” and “Exit” buttons are fully functional. Additional features will be enabled in subsequent development phases.
+This panel contains all the controls for performing calculations and managing the view.
 
-### Interactive 3D Plot Controls
+| Control | Description |
+| :--- | :--- |
+| **Z-Factor** | A multiplier to scale the height of the data. A value > 1.0 exaggerates topographic features. |
+| **Scale (px/m)** | Defines how many pixels in the image correspond to one meter in the real world. **Crucial for accurate measurements if not using perspective calibration.** |
+| **Unit** | A dropdown to select the measurement unit for all calculation results (e.g., meters, feet). |
+| **Calibrate Perspective** | Starts the 4-point perspective calibration process. See the "Perspective Calibration" section below for details. |
+| **Calculate Gradient** | Computes the rate of change of height and displays it as a heatmap on the selected region. |
+| **Calculate Volume** | Estimates the volume under the surface of the selected region. |
+| **Calculate Arc Length** | Estimates the length of a curve across the horizontal center of the selected region. |
+| **Toggle View** | Switches the canvas between the live camera feed and the last analysis result (e.g., a heatmap). |
+| **Clear Selection** | Removes the selection rectangle from the canvas. |
 
-When a 3D surface plot is displayed (e.g., in a separate window or embedded within the GUI), you can interact with it using standard `matplotlib` controls:
+### Main Window Buttons
 
-*   **Rotate:** Click and drag the plot with your mouse to change the viewing angle and perspective.
-*   **Zoom:** Use the scroll wheel on your mouse to zoom in and out of the plot.
-*   **Pan:** Hold down the `Shift` key (or sometimes `Ctrl` or `Alt`, depending on your OS and `matplotlib` backend) and click-and-drag to move the plot horizontally and vertically within the display area.
-
-These interactive controls allow for a comprehensive exploration of the 3D topographic data, enabling users to examine specific features and understand the surface's geometry from various viewpoints.
+| Button | Description |
+| :--- | :--- |
+| **Open/Pause Camera** | Starts or pauses the live camera feed. |
+| **Open 3D Plot Window** | Opens a new window with an interactive 3D plot of the selected region. |
+| **Exit** | Closes the application. |
 
 ---
 
-## 🧮 7. Example Use Case
+## 📐 7. Performing Measurements and Analysis
 
-**Scenario:**
-You place a small object (like a ramp or a curved surface) in front of your camera.
+### Step 1: Start the Camera
 
-**Result:**
-TopoVision:
+Click the **"Open Camera"** button to start the video feed.
 
-* Captures the light intensity map,
-* Calculates the slope at each pixel,
-* Displays a heatmap with color-coded elevations,
-* Overlays gradient vectors pointing in the direction of maximum increase.
+### Step 2: Calibrate for Accurate Measurements
 
-This helps visualize **how partial derivatives and gradients behave** in a real-world context.
+For the most accurate results, you must calibrate the perspective.
+
+1.  Click **"Calibrate Perspective"**.
+2.  The status bar will prompt you to select four points. Click the four corners of a known rectangle in the camera's view (e.g., a sheet of A4 paper, a book).
+3.  After selecting the fourth point, input fields will appear in the analysis panel.
+4.  Enter the **real-world width and height** of the rectangle in **meters**.
+5.  Click **"Apply Calibration"**.
+
+The system will automatically calculate the correct scale and apply it to all future measurements.
+
+> **Note:** If you do not calibrate, you **must** set the **Scale (px/m)** value manually for calculations to be accurate.
+
+### Step 3: Select a Region
+
+Click and drag your mouse on the canvas to draw a rectangle over the area you want to analyze. The dimensions of the selection will be displayed in the status bar in both pixels and your chosen real-world unit.
+
+### Step 4: Run an Analysis
+
+With a region selected, click one of the calculation buttons:
+- **Calculate Gradient**: Overlays a heatmap showing the slope.
+- **Calculate Volume**: Displays the calculated volume in the status bar.
+- **Calculate Arc Length**: Displays the calculated length in the status bar.
+
+### Step 5: View in 3D
+
+Click the **"Open 3D Plot Window"** button to see a live, interactive 3D surface plot of your selected region. The plot will update in real time as you move the selection.
 
 ---
 
 ## 🧪 8. Testing and Validation
 
-To verify the system is working correctly:
+To run the automated test suite:
 
 ```bash
 pytest --cov
-```
-
-You should see output like:
-
-```
-==================== test session starts ====================
-collected 6 items
-tests/test_capture.py .....                        [ 40%]
-tests/test_calculus.py ....                        [100%]
-================= 9 passed in 3.45s ==========================
 ```
 
 ---
 
 ## 🧰 9. Troubleshooting
 
-| Problem                    | Possible Cause                              | Solution                                                |
-| -------------------------- | ------------------------------------------- | ------------------------------------------------------- |
-| **Camera not detected**    | Device not connected or used by another app | Close other apps or check camera permissions            |
-| **App closes immediately** | Missing dependencies                        | Run `pip install -r requirements.txt`                   |
-| **Slow performance**       | Low-end hardware                            | Use `requirements-light.txt` or lower camera resolution |
-| **No GUI window appears**  | Tkinter not installed                       | Reinstall Python (Tkinter comes by default)             |
-
----
-
-## 👥 10. Team Credits
-
-| Name                             | Role                                |
-| -------------------------------- | ----------------------------------- |
-| **Alejandro Botina Herrera**     | Technical Lead & System Architect   |
-| **Andreina Olivares Cabrera**    | Interface Developer & Documentation |
-| **Jonathan Joel Ruviño**         | Testing & Numerical Computation     |
-| **Kiara Vanessa Muñoz Bayter**   | Environment Setup & Visualization   |
-| **Víctor Manuel Barrero Acosta** | Capture Systems & Demonstrations    |
-
----
-
-## 📚 11. License
-
-This project is distributed under the **Apache License 2.0**.
-You may freely use, modify, and distribute it for academic purposes.
-For details, see the [LICENSE](../LICENSE) file.
-
----
-
-## 🏁 12. Summary
-
-**TopoVision** bridges the gap between **mathematical theory** and **visual intuition**.
-By combining calculus, computer vision, and real-time visualization, it offers a unique way
-to understand surface behavior through direct experimentation.
+| Problem | Possible Cause | Solution |
+| :--- | :--- | :--- |
+| **Camera not detected** | Device not connected or used by another app | Close other apps or check camera permissions. |
+| **App closes immediately** | Missing dependencies | Ensure you have installed the requirements from `pyproject.toml`. |
+| **Measurements are inaccurate** | Incorrect scale or no calibration | Use the **"Calibrate Perspective"** tool or set the **Scale (px/m)** value manually. |
 
 ---
 
 **TopoVision Development Team — 2025**
-
-> “When numbers shape reality, vision becomes understanding.”

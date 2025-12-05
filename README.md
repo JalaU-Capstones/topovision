@@ -20,15 +20,29 @@ The main goal is to create a tool that connects mathematical theory with visual 
 
 ---
 
+## ✨ **What's New in Version 0.2.1**
+
+This version introduces a complete unit conversion and perspective calibration system, making TopoVision a more accurate and user-friendly tool for real-world analysis.
+
+*   **Unit Conversion System**: All calculations and measurements can now be displayed in various units (meters, feet, etc.).
+*   **Perspective Calibration**: A new calibration tool allows you to correct for perspective distortion by defining a real-world rectangle, ensuring all measurements are dimensionally accurate.
+*   **Interactive Tutorials**: A new event-driven tutorial system guides first-time users through the application's key features.
+*   **Improved UI**: The user interface has been refactored for a more stable and responsive layout.
+*   **Enhanced Visualizations**: The gradient heatmap and 3D plot now correctly handle perspective and aspect ratio, providing clearer and more accurate visualizations.
+
+---
+
 ## ⚙️ **Key Features**
 
 *   🎥 Real-time video capture using OpenCV
-*   🧮 Numerical computation of partial derivatives and gradients
-*   ✨ **Dynamic 3D Surface Plots**: Interactive visualization of topographic data, including heatmaps and vector fields.
-*   🖱️ Interactive point and region selection on GUI
-*   🧠 Modular design following **SOLID** principles and **Design Patterns**
-*   ⚡ Optimized for low-resource environments (Python 3.11 + NumPy vectorization)
-*   📦 Easy installation via PyPI
+*   📏 **Unit Conversion**: Display results in meters, feet, kilometers, etc.
+*   📐 **Perspective Calibration**: Correct for perspective distortion for accurate measurements.
+*   🧮 Numerical computation of partial derivatives, gradients, arc length, and volume.
+*   ✨ **Dynamic 3D Surface Plots**: Interactive visualization of topographic data.
+*   🗺️ **Gradient Heatmaps**: Clear visualization of slope and steepness.
+*   🖱️ Interactive region selection on the GUI.
+*   🧠 **Interactive Tutorials**: Guides first-time users through the application.
+*   📦 Easy installation via PyPI.
 
 ---
 
@@ -40,13 +54,7 @@ TopoVision offers rich and interactive 3D visualizations to help understand comp
 
 Experience real-time rendering of surfaces, allowing you to observe changes in elevation and features interactively.
 
-![3D Surface Plot Screenshot](docs/images/3d_surface_plot.gif) <!-- Placeholder for a GIF or screenshot -->
-
-### Gradient Vector Fields
-
-Visualize the direction and magnitude of the steepest ascent across the terrain, providing insights into flow and slope.
-
-![Gradient Vector Field Screenshot](docs/images/gradient_vector_field.png) <!-- Placeholder for a screenshot -->
+![3D Surface Plot Screenshot](docs/images/3d_surface_plot.gif)
 
 ---
 
@@ -70,7 +78,7 @@ Or simply:
 topovision
 ```
 
-You should see a GUI window with **"Open Camera"** and **"Exit"** buttons.
+You should see a GUI window with a welcome tutorial guiding you to press the **"Open Camera"** button.
 
 ---
 
@@ -155,46 +163,38 @@ topovision/
 ├── src/
 │   └── topovision/
 │       ├── __init__.py
-│       ├── __main__.py          # Entry point for CLI execution
-│       ├── app.py               # Main application logic
+│       ├── __main__.py
+│       ├── app.py
 │       ├── core/
 │       │   ├── interfaces.py
 │       │   └── models.py
 │       ├── capture/
-│       │   ├── capture_module.py
-│       │   ├── camera_backends.py
-│       │   └── preprocessing.py
+│       │   └── ...
 │       ├── calculus/
 │       │   ├── calculus_module.py
-│       │   └── methods/
-│       │       ├── finite_diff.py
-│       │       ├── gradient.py
-│       │       └── riemann.py
+│       │   └── strategies.py
 │       ├── visualization/
-│       │   ├── visualization_module.py
-│       │   ├── heatmap.py
-│       │   └── vector_overlay.py
-│       │   └── plot3d.py          # Added 3D plotting capabilities
+│       │   ├── visualizers.py
+│       │   └── plot3d.py
 │       ├── gui/
-│       │   └── gui_module.py
+│       │   ├── gui_module.py
+│       │   ├── analysis_panel.py
+│       │   └── ...
 │       ├── services/
-│       │   ├── cache.py
 │       │   └── task_queue.py
 │       ├── utils/
-│       │   └── validators.py
+│       │   ├── math.py
+│       │   ├── units.py
+│       │   └── perspective.py
 │       └── tests/
-│           ├── test_capture.py
-│           ├── test_calculus.py
-│           └── test_visualization.py
+│           └── ...
 ├── docs/
 │   ├── architecture.md
 │   ├── user-guide.md
-│   └── github-flow-guide.md
+│   └── ...
 ├── pyproject.toml
-├── requirements.txt
-├── requirements-dev.txt
-├── LICENSE
-└── README.md
+├── README.md
+└── ...
 ```
 
 ---
@@ -206,10 +206,9 @@ topovision/
 | Language             | Python 3.11          |
 | GUI                  | Tkinter              |
 | Computer Vision      | OpenCV               |
-| Numerical Analysis   | NumPy, SciPy         |
+| Numerical Analysis   | NumPy                |
 | Visualization        | Matplotlib           |
-| Performance          | Numba                |
-| Documentation        | Markdown + pdoc      |
+| Documentation        | Markdown             |
 | Testing              | Pytest               |
 | Linting / Formatting | Flake8, Black, Mypy  |
 | Version Control      | GitHub (GitHub Flow) |
@@ -229,15 +228,6 @@ python -m topovision
 topovision
 ```
 
-### Programmatic Usage
-
-```python
-from topovision.app import main
-
-# Launch the application
-main()
-```
-
 ---
 
 ## 🧮 **Core Functionalities (Mathematical Overview)**
@@ -245,10 +235,11 @@ main()
 | Feature                   | Description                                         | Method                      |
 | :------------------------ | :-------------------------------------------------- | :-------------------------- |
 | Partial Derivatives       | Calculated using finite difference methods          | Central Difference Scheme   |
-| Gradient Vector           | Visualized as direction + magnitude arrows          | Sobel Operator              |
-| Double Integrals          | Computed with discrete Riemann sums                 | Trapezoidal Rule            |
+| Gradient Vector           | Visualized as a heatmap                             | Sobel Operator              |
+| Volume Calculation        | Computed with discrete Riemann sums                 | Trapezoidal Rule            |
+| Arc Length Calculation    | Calculated as the sum of Euclidean distances        | Vectorized NumPy operations |
 | 3D Surface Visualization  | Dynamic and interactive 3D plots of topographic surfaces | Matplotlib + NumPy          |
-| Real-time Processing      | Optimized numerical computations                    | Numba JIT Compilation       |
+| Perspective Correction    | Uses a 4-point homography to correct for perspective | OpenCV `getPerspectiveTransform` |
 
 ---
 
@@ -270,35 +261,6 @@ Follow **Conventional Commits** format:
 
 ```
 <type>(<scope>): <description>
-```
-
-**Examples:**
-
-```bash
-feat(capture): added OpenCVCamera backend
-fix(gui): fixed window resize event
-docs(readme): updated installation steps
-```
-
-**Types:**
-- `feat` — new feature
-- `fix` — bug fix
-- `docs` — documentation changes
-- `refactor` — code structure improvements
-- `test` — test-related commits
-- `chore` — build, CI, or maintenance
-
-### 🔁 Typical Workflow
-
-```bash
-git checkout develop
-git pull
-git checkout -b feature/my-feature
-# Make changes...
-git add .
-git commit -m "feat(scope): description"
-git push origin feature/my-feature
-# Open Pull Request → merge into develop → then into main
 ```
 
 ---
@@ -332,97 +294,10 @@ pytest --cov=topovision
 
 ---
 
-## 🧱 **Project Roadmap**
-
-| Week  | Focus                    | Key Deliverables                            |
-| :---: | :----------------------- | :------------------------------------------ |
-| **1** | Setup & Architecture     | Folder structure, interfaces, mock GUI      |
-| **2** | Capture & Processing     | Camera module + preprocessing filters       |
-| **3** | Calculus & Visualization | Derivatives, gradients, and heatmaps        |
-| **4** | Testing & Publication    | PyPI release, documentation, and demo video |
-
----
-
 ## 🧾 **License**
 
 This project is licensed under the **Apache License 2.0**.
 See the [LICENSE](LICENSE) file for more details.
-
----
-
-## 📚 **Acknowledgements**
-
-* *Universidad Jala* — Department of Computer Science
-* Course: **Calculus II — Applied Computational Analysis**
-* Year: 2025
-
----
-
-## 💡 **Contributing**
-
-We welcome contributions!
-
-1. Fork the repository
-2. Create a new branch (`feature/your-feature`)
-3. Install development dependencies: `pip install -e .[dev]`
-4. Commit your changes using Conventional Commits
-5. Run tests: `pytest`
-6. Open a Pull Request
-
----
-
-## 🐛 **Troubleshooting**
-
-### Tkinter not found
-**Error:** `ModuleNotFoundError: No module named '_tkinter'`
-
-**Solution:** Install Tkinter for your system (see System Requirements section above)
-
-### OpenCV camera issues
-**Error:** Camera not opening or permission denied
-
-**Solution:**
-- Ensure your camera is not being used by another application
-- On Linux, add your user to the `video` group: `sudo usermod -a -G video $USER`
-- Restart your session after group changes
-
-### Import errors after installation
-**Error:** `ModuleNotFoundError: No module named 'topovision'`
-
-**Solution:**
-```bash
-# Verify installation
-pip list | grep topovision
-
-# Reinstall if needed
-pip uninstall topovision
-pip install topovision
-```
-
----
-
-## 🧠 **Future Improvements**
-
-* Add 3D mesh visualization using Plotly or Mayavi
-* Implement topographic point cloud import (LAS/CSV)
-* Integrate hardware sensors for live terrain capture
-* Develop a lightweight Web-based viewer (Flask + WebGL)
-* Machine learning integration for automatic feature detection
-* Export functionality for analysis results (JSON, CSV, HDF5)
-
----
-
-## 📊 **Performance**
-
-TopoVision is optimized for real-time analysis:
-- **Frame processing:** ~30 FPS on modern hardware
-- **Gradient computation:** <50ms per frame
-- **Memory usage:** ~200MB typical, <500MB peak
-
-**Tested on:**
-- CPU: Intel i5-8250U / AMD Ryzen 5 3600
-- RAM: 8GB minimum, 16GB recommended
-- OS: Windows 10/11, Ubuntu 20.04+, macOS 12+
 
 ---
 

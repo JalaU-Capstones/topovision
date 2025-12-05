@@ -94,7 +94,7 @@ class VolumeResult:
     """
 
     volume: float
-    units: str = "cubic_pixels"
+    units: str = "cubic_meters"
 
 
 @dataclass(frozen=True)
@@ -104,10 +104,12 @@ class ArcLengthResult:
 
     Attributes:
         length (float): The calculated arc length along a path.
+        units (str): The units of the calculated length (e.g., "pixels", "meters").
         path_points (Optional[NDArray[np.int32]]): The points defining the path.
     """
 
     length: float
+    units: str = "pixels"
     path_points: Optional[NDArray[np.int32]] = None
 
 

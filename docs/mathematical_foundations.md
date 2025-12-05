@@ -1,170 +1,117 @@
-# Mathematical Foundations of TopoVision
+# Mathematical Foundations of TopoVision (v0.2.1)
 
 > **Purpose:**
-> This document provides a rigorous mathematical exposition of the core concepts underpinning TopoVision's analytical capabilities. It is intended for mathematicians seeking to understand the theoretical basis of the system, independent of its software implementation. All mathematical expressions are presented in LaTeX.
+> This document provides a rigorous mathematical exposition of the core concepts underpinning TopoVision's analytical capabilities. It is intended for mathematicians and engineers seeking to understand the theoretical basis of the system.
 
 ---
 
 ## 1. Introduction to Topographic Analysis
 
-TopoVision is designed to analyze and visualize three-dimensional surfaces, often derived from two-dimensional image data where pixel intensity can represent elevation or another scalar field. The system employs various mathematical tools from multivariable calculus and linear algebra to extract meaningful information from these surfaces, such as slopes, curvatures, volumes, and transformations.
+TopoVision is designed to analyze and visualize three-dimensional surfaces derived from two-dimensional image data, where pixel intensity represents a scalar field (e.g., elevation). The system employs various tools from multivariable calculus and linear algebra to extract meaningful information from these surfaces, such as slopes, curvatures, volumes, and arc lengths.
 
-Let a surface be represented by a scalar field $f(x, y)$, where $(x, y)$ are coordinates in a two-dimensional domain, and $f(x, y)$ is the value (e.g., elevation, intensity) at that point. In some contexts, we might consider a three-dimensional scalar field $f(x, y, z)$ or vector fields.
-
----
-
-## 2. Multivariable Calculus Concepts in TopoVision
-
-TopoVision's analytical core is built upon the principles of multivariable calculus, extending concepts from single-variable calculus to functions involving multiple independent variables.
-
-### 2.1. Functions of Several Variables and Vector Functions
-
-A central concept in TopoVision is the representation of a surface as a **function of several variables**. For a 2D topographic map, the elevation $z$ at any point $(x, y)$ can be described by a scalar function $f: \mathbb{R}^2 \to \mathbb{R}$, denoted as $z = f(x, y)$. This function maps a point in the $xy$-plane to a single scalar value representing height, temperature, or any other scalar quantity.
-
-$$ f(x, y) = \text{elevation at point } (x, y) $$
-
-In scenarios involving volumetric data or time-varying fields, we might encounter functions of three or more variables, e.g., $f(x, y, z)$ for density within a 3D volume.
-
-**Vector functions** are also crucial, particularly for representing paths, curves, or vector fields. A curve on a surface can be parameterized by a single variable, say $t$, as $\mathbf{r}(t) = \langle x(t), y(t), z(t) \rangle$. The gradient vector field, discussed later, is another example of a vector function, mapping each point $(x, y)$ to a vector $\nabla f(x, y)$.
-
-### 2.2. Limits and Continuity in Multiple Dimensions
-
-The concept of a **limit** for functions of several variables is foundational, underpinning the definitions of continuity and differentiability. For a function $f(x, y)$, the limit as $(x, y)$ approaches a point $(a, b)$ exists if $f(x, y)$ approaches a unique value $L$ regardless of the path taken:
-
-$$ \lim_{(x, y) \to (a, b)} f(x, y) = L $$
-
-A function is **continuous** at $(a, b)$ if $\lim_{(x, y) \to (a, b)} f(x, y) = f(a, b)$. In TopoVision, we generally assume the underlying topographic surfaces are continuous and differentiable over their domains, allowing for the application of calculus tools. Discontinuities, if present, often represent features like cliffs or faults, which require special handling.
-
-### 2.3. Derivatives: Understanding Local Change
-
-Derivatives are fundamental for understanding how a surface changes locally. In TopoVision, we primarily deal with partial derivatives and gradients for scalar fields.
-
-#### 2.3.1. Partial Derivatives
-
-For a scalar field $f(x, y)$, the partial derivatives with respect to $x$ and $y$ describe the rate of change of $f$ along the $x$ and $y$ directions, respectively, while holding the other variable constant. These are direct extensions of the single-variable derivative concept.
-
-The partial derivative with respect to $x$ is defined as:
-$$ \frac{\partial f}{\partial x} = \lim_{h \to 0} \frac{f(x+h, y) - f(x, y)}{h} $$
-
-The partial derivative with respect to $y$ is defined as:
-$$ \frac{\partial f}{\partial y} = \lim_{k \to 0} \frac{f(x, y+k) - f(x, y)}{k} $$
-
-These are crucial for determining the slope of the surface in orthogonal directions. In TopoVision, these are numerically approximated using finite difference methods on discrete image data.
-
-#### 2.3.2. Gradient Vector
-
-The gradient of a scalar field $f(x, y)$ is a vector that points in the direction of the greatest rate of increase of $f$, and its magnitude is that maximum rate of increase. It combines the partial derivatives into a single vector:
-
-$$ \nabla f(x, y) = \left\langle \frac{\partial f}{\partial x}, \frac{\partial f}{\partial y} \right\rangle = \frac{\partial f}{\partial x} \mathbf{i} + \frac{\partial f}{\partial y} \mathbf{j} $$
-
-In TopoVision, the gradient is used to visualize the "steepness" and "direction of ascent" on a surface, often represented as vector arrows overlaid on the surface. The magnitude of the gradient, $\| \nabla f \|$, gives the maximum slope.
-
-#### 2.3.3. Second-Order Partial Derivatives and Curvature
-
-Second-order partial derivatives provide information about the curvature of the surface.
-$$ \frac{\partial^2 f}{\partial x^2}, \quad \frac{\partial^2 f}{\partial y^2}, \quad \frac{\partial^2 f}{\partial x \partial y} = \frac{\partial^2 f}{\partial y \partial x} $$
-These can be used to compute quantities like the Laplacian ($\nabla^2 f = \frac{\partial^2 f}{\partial x^2} + \frac{\partial^2 f}{\partial y^2}$) or to analyze the concavity and convexity of the surface. The Hessian matrix, composed of these second partials, can be used for more advanced curvature analysis and classification of critical points.
-
-### 2.4. Integrals: Accumulation and Volume
-
-Integrals are used to compute accumulated quantities over a region, such as area, volume, or total intensity.
-
-#### 2.4.1. Double Integrals
-
-For a scalar field $f(x, y)$ over a two-dimensional region $R$ in the $xy$-plane, the **double integral** represents the volume under the surface $z = f(x, y)$ and above the region $R$. This is a direct generalization of the definite integral from single-variable calculus, where instead of integrating over an interval, we integrate over a 2D region.
-
-$$ \iint_R f(x, y) \, dA $$
-
-If $R$ is a rectangular region defined by $a \le x \le b$ and $c \le y \le d$, the double integral can be evaluated as an iterated integral:
-
-$$ \int_a^b \int_c^d f(x, y) \, dy \, dx \quad \text{or} \quad \int_c^d \int_a^b f(x, y) \, dx \, dy $$
-
-In TopoVision, double integrals can be used to calculate the "volume" of a topographic feature (e.g., a mountain or a depression) or the total "mass" if $f(x, y)$ represents a density function.
-
-#### 2.4.2. Triple Integrals
-
-For a scalar field $f(x, y, z)$ over a three-dimensional solid region $E$, the **triple integral** represents the total "mass" or accumulated quantity within that region. This extends the concept further into three dimensions.
-
-$$ \iiint_E f(x, y, z) \, dV $$
-
-If $E$ is a rectangular box defined by $a_1 \le x \le b_1$, $a_2 \le y \le b_2$, and $a_3 \le z \le b_3$, the triple integral can be evaluated as an iterated integral:
-
-$$ \int_{a_1}^{b_1} \int_{a_2}^{b_2} \int_{a_3}^{b_3} f(x, y, z) \, dz \, dy \, dx $$
-
-While less common for direct surface analysis of 2D image data, triple integrals could be employed in TopoVision for analyzing volumetric data, such as subsurface structures, density distributions within a 3D model, or for calculating the total amount of a substance distributed throughout a 3D space.
-
-#### 2.4.3. Riemann Sums for Numerical Integration
-
-In a computational context, integrals are often approximated using Riemann sums. For a double integral over a rectangular region, we can partition the region into small sub-rectangles $\Delta A_{ij} = \Delta x \Delta y$. The Riemann sum is then:
-
-$$ \iint_R f(x, y) \, dA \approx \sum_{i=1}^m \sum_{j=1}^n f(x_i^*, y_j^*) \, \Delta A_{ij} $$
-
-where $(x_i^*, y_j^*)$ is a sample point in the $ij$-th sub-rectangle. TopoVision utilizes numerical methods, often based on Riemann sums or more sophisticated quadrature rules, to compute these integrals from discrete data points (e.g., pixel values).
+Let a surface be represented by a scalar field $z = f(x, y)$, where $(x, y)$ are coordinates in a two-dimensional domain.
 
 ---
 
-## 3. Matrices: Transformations and Data Representation
+## 2. Core Calculus Concepts in TopoVision
 
-Matrices are fundamental for representing data, performing linear transformations, and solving systems of equations.
+### 2.1. Partial Derivatives and the Gradient Vector
 
-### 3.1. Data Representation
+The foundation of slope analysis in TopoVision is the **gradient vector**. For a surface $z = f(x, y)$, the gradient, denoted $\nabla f$, is a vector that points in the direction of the steepest ascent at any given point. Its components are the partial derivatives of the function:
 
-In TopoVision, image data and scalar fields are inherently represented as matrices. A grayscale image of dimensions $M \times N$ can be seen as an $M \times N$ matrix where each entry $A_{ij}$ corresponds to the intensity value of the pixel at row $i$ and column $j$.
+$$ \nabla f(x, y) = \left\langle \frac{\partial f}{\partial x}, \frac{\partial f}{\partial y} \right\rangle $$
 
-$$ A = \begin{pmatrix}
-a_{11} & a_{12} & \cdots & a_{1N} \\
-a_{21} & a_{22} & \cdots & a_{2N} \\
-\vdots & \vdots & \ddots & \vdots \\
-a_{M1} & a_{M2} & \cdots & a_{MN}
+-   $\frac{\partial f}{\partial x}$: The rate of change of height along the x-axis.
+-   $\frac{\partial f}{\partial y}$: The rate of change of height along the y-axis.
+
+In TopoVision, the image data is discrete. Therefore, we approximate these partial derivatives numerically using a **finite difference** method, specifically the central difference scheme, which is implemented efficiently by NumPy's `np.gradient` function.
+
+Given a grid of pixel values, the partial derivatives at a point $(i, j)$ are approximated as:
+
+$$ \frac{\partial f}{\partial x} \approx \frac{f(i, j+1) - f(i, j-1)}{2 \cdot \Delta x} $$
+$$ \frac{\partial f}{\partial y} \approx \frac{f(i+1, j) - f(i-1, j)}{2 \cdot \Delta y} $$
+
+Where $\Delta x$ and $\Delta y$ are the real-world distances between pixel centers, determined by the user-defined scale.
+
+### 2.2. Volume Calculation via Double Integrals
+
+The volume under a surface $z = f(x, y)$ over a region $R$ in the $xy$-plane is given by the double integral:
+
+$$ V = \iint_R f(x, y) \,dA $$
+
+In a computational context, we approximate this integral using a **Riemann sum**. The region $R$ is partitioned into small rectangles, each corresponding to a pixel. The volume of the column above each pixel is the pixel's area multiplied by its height (intensity).
+
+The area of a single pixel, $\Delta A$, is calculated from the user-provided scale (in pixels per meter):
+
+$$ \Delta A = (\text{meters per pixel})^2 = \left( \frac{1}{\text{scale}} \right)^2 $$
+
+The total volume is the sum of the volumes of all pixel columns:
+
+$$ V \approx \sum_{i} \sum_{j} f(x_i, y_j) \cdot \Delta A $$
+
+Where $f(x_i, y_j)$ is the intensity of the pixel at $(i, j)$. The final result is also scaled by the user-defined **Z-factor**.
+
+### 2.3. Arc Length of a Surface Cross-Section
+
+The arc length of a curve defined by a function $y = g(x)$ from $x=a$ to $x=b$ is given by the integral:
+
+$$ L = \int_a^b \sqrt{1 + [g'(x)]^2} \,dx $$
+
+In TopoVision, we calculate the arc length of a cross-section of the topographic surface. This is treated as a 3D path where the x-coordinate is the pixel index and the y-coordinate is the pixel's height.
+
+For a discrete set of points $(x_i, y_i)$, the total arc length is approximated by summing the Euclidean distances between consecutive points:
+
+$$ L \approx \sum_{i=1}^{N-1} \sqrt{(x_{i+1} - x_i)^2 + (y_{i+1} - y_i)^2} $$
+
+The coordinates are first scaled to their real-world units:
+-   $x_i$ is scaled using the `pixels_per_meter` value.
+-   $y_i$ (height) is scaled using the `z_factor`.
+
+This calculation is performed efficiently using NumPy's vectorized operations.
+
+---
+
+## 3. Linear Algebra for Perspective Correction
+
+A key feature of TopoVision is its ability to correct for perspective distortion. This is achieved using a **homography transformation**, a concept from projective geometry.
+
+### 3.1. The Homography Matrix
+
+A homography is an invertible transformation that maps points in one plane to another. In our case, it maps the distorted, real-world plane captured by the camera to a corrected, "top-down" orthographic view.
+
+This transformation is represented by a $3 \times 3$ matrix, $H$:
+
+$$ H = \begin{pmatrix}
+h_{11} & h_{12} & h_{13} \\
+h_{21} & h_{22} & h_{23} \\
+h_{31} & h_{32} & 1
 \end{pmatrix} $$
 
-Color images can be represented as a stack of three such matrices (for Red, Green, and Blue channels).
+Given a point in the source image $(x, y)$, its corresponding point in the destination (corrected) image $(x', y')$ is calculated as:
 
-### 3.2. Linear Transformations
+$$ \begin{pmatrix} x_p \\ y_p \\ w_p \end{pmatrix} = H \begin{pmatrix} x \\ y \\ 1 \end{pmatrix} $$
 
-Matrices are powerful tools for applying linear transformations to points or vectors in space. Common transformations include scaling, rotation, translation (often using homogeneous coordinates), and projection.
+Where $x' = x_p / w_p$ and $y' = y_p / w_p$.
 
-A point $(x, y)$ can be represented as a column vector $\mathbf{p} = \begin{pmatrix} x \\ y \end{pmatrix}$. A linear transformation $T$ can be applied using a transformation matrix $M$:
+### 3.2. Computing the Homography
 
-$$ \mathbf{p}' = M \mathbf{p} $$
+To compute $H$, we need at least four pairs of corresponding points between the source and destination planes. In TopoVision, the user provides these by:
+1.  Selecting the four corners of a known rectangle in the source image.
+2.  Providing the real-world width and height of that rectangle.
 
-For example, a 2D rotation matrix by an angle $\theta$ is:
-$$ R_\theta = \begin{pmatrix}
-\cos \theta & -\sin \theta \\
-\sin \theta & \cos \theta
-\end{pmatrix} $$
+These four source points are mapped to the four corners of a destination rectangle with the correct aspect ratio. OpenCV's `getPerspectiveTransform` function is then used to solve for the matrix $H$.
 
-And a scaling matrix with factors $s_x, s_y$ is:
-$$ S = \begin{pmatrix}
-s_x & 0 \\
-0 & s_y
-\end{pmatrix} $$
+### 3.3. Applying the Correction
 
-In TopoVision, matrix operations are used for:
-*   **Image Processing:** Applying filters (e.g., convolution kernels for blurring, sharpening, edge detection) which are essentially matrix operations.
-*   **Geometric Transformations:** Rotating, scaling, or translating visualizations or camera perspectives.
-*   **Coordinate System Changes:** Transforming coordinates between different reference frames (e.g., camera space to world space to screen space).
+Once $H$ is known, it can be used to:
+-   **Warp the entire image or a region of interest (ROI)** into a top-down view for accurate analysis. This is done using OpenCV's `warpPerspective` function.
+-   **Calculate accurate real-world dimensions** of any selection by transforming its corner points and measuring the distances in the corrected space.
+-   **Display visualizations correctly** by using the inverse matrix, $H^{-1}$, to warp the generated heatmap back onto the original, uncorrected image, ensuring it perfectly overlays the selected region.
 
-### 3.3. Matrix Operations
-
-Basic matrix operations are extensively used:
-*   **Addition/Subtraction:** Element-wise operations, e.g., for combining images or adjusting brightness.
-*   **Scalar Multiplication:** Scaling all elements of a matrix.
-*   **Matrix Multiplication:** Crucial for composing transformations and applying filters. If $A$ is an $M \times N$ matrix and $B$ is an $N \times P$ matrix, their product $C = AB$ is an $M \times P$ matrix where:
-    $$ C_{ij} = \sum_{k=1}^N A_{ik} B_{kj} $$
-*   **Transpose:** Swapping rows and columns, denoted $A^T$.
-*   **Inverse:** For a square matrix $A$, its inverse $A^{-1}$ satisfies $AA^{-1} = A^{-1}A = I$, where $I$ is the identity matrix. Used for "undoing" transformations or solving linear systems.
-
-### 3.4. Eigenvalues and Eigenvectors (Potential Application)
-
-While not explicitly listed as a core component, eigenvalues and eigenvectors could be applied for advanced analysis, such as Principal Component Analysis (PCA) for dimensionality reduction or identifying principal directions of curvature on a surface (e.g., using the Hessian matrix).
-
-For a square matrix $A$, an eigenvector $\mathbf{v}$ and its corresponding eigenvalue $\lambda$ satisfy:
-$$ A \mathbf{v} = \lambda \mathbf{v} $$
-where $\mathbf{v} \ne \mathbf{0}$.
+This two-step process of warping the data for analysis and then un-warping the result for visualization is crucial for maintaining both analytical accuracy and visual coherence.
 
 ---
 
 ## 4. Conclusion
 
-The mathematical framework of TopoVision relies heavily on multivariable calculus for analyzing surface properties and linear algebra for data representation and transformations. By leveraging these robust mathematical tools, TopoVision provides a powerful platform for quantitative topographic analysis and visualization. The computational implementation of these concepts often involves numerical approximations and efficient matrix operations to handle discrete data.
+The mathematical framework of TopoVision combines the analytical power of multivariable calculus with the geometric transformations of linear algebra. By approximating derivatives and integrals numerically and using homography to correct for perspective, the system provides a robust tool for quantitative topographic analysis from real-time video.

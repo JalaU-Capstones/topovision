@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "topovision"
-version = "0.1.1"
+version = "0.2.1"
 description = "TopoVision - 3D Topographic Analysis System for Calculus II"
 authors = [
     { name = "TopoVision Team", email = "code.with.botina@gmail.com" }
@@ -17,7 +17,7 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Education",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache 2.0",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering :: Mathematics",

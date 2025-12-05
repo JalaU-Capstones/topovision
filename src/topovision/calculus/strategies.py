@@ -12,66 +12,70 @@ from numpy.typing import NDArray
 from topovision.core.interfaces import IAnalysisStrategy
 from topovision.core.models import ArcLengthResult, GradientResult, VolumeResult
 from topovision.utils.math import calculate_arc_length
+from topovision.utils.units import UnitConverter
 
 
 class GradientStrategy(IAnalysisStrategy):
     """
     Calculates the gradient (rate of change) of the input data.
-    The gradient indicates the direction of the steepest ascent and its magnitude.
     """
 
     def analyze(self, data: NDArray[np.uint8], **kwargs: Any) -> GradientResult:
         """
         Computes the gradient (dz/dx, dz/dy) of the 2D data.
-
-        Args:
-            data (NDArray[np.uint8]): The input 2D array representing
-                                      height/intensity values.
-            **kwargs: Not used for gradient calculation, but kept for
-                      interface consistency.
-
-        Returns:
-            GradientResult: An object containing the dz_dx and dz_dy components.
         """
         if data.ndim != 2:
             raise ValueError("GradientStrategy expects 2D data.")
 
-        dz_dy, dz_dx = np.gradient(data.astype(np.float32))
-        # Optionally, calculate magnitude
+        pixels_per_meter = kwargs.get("pixels_per_meter", 1.0)
+        z_factor = kwargs.get("z_factor", 1.0)
+
+        # The distance between pixels in meters
+        dx = 1.0 / pixels_per_meter
+        dy = 1.0 / pixels_per_meter
+
+        # Scale the height data
+        scaled_data = data.astype(np.float32) * z_factor
+
+        # np.gradient computes the gradient using the provided spacing
+        dz_dy, dz_dx = np.gradient(scaled_data, dy, dx)
         magnitude = np.sqrt(dz_dx**2 + dz_dy**2)
+
         return GradientResult(dz_dx=dz_dx, dz_dy=dz_dy, magnitude=magnitude)
 
 
 class VolumeStrategy(IAnalysisStrategy):
     """
-    Calculates the approximate volume under the surface defined by the input data
-    using a scaled Riemann sum.
+    Calculates the approximate volume under the surface defined by the input data.
     """
 
     def analyze(self, data: NDArray[np.uint8], **kwargs: Any) -> VolumeResult:
         """
         Computes the volume under the 2D data surface.
-
-        Args:
-            data (NDArray[np.uint8]): The input 2D array representing
-                                      height/intensity values.
-            z_factor (float): A scaling factor for the height (z-axis) values.
-                              Defaults to 1.0.
-
-        Returns:
-            VolumeResult: An object containing the calculated volume.
         """
         if data.ndim != 2:
             raise ValueError("VolumeStrategy expects 2D data.")
 
         z_factor = kwargs.get("z_factor", 1.0)
-        if not isinstance(z_factor, (int, float)) or z_factor <= 0:
-            raise ValueError("z_factor must be a positive number.")
+        pixels_per_meter = kwargs.get("pixels_per_meter", 1.0)
+        unit = kwargs.get("unit", "cubic_meters")
 
-        # The volume is approximated by summing all intensity values (heights)
-        # and scaling them by the z_factor. Assuming dx=dy=1 for each pixel.
-        volume = np.sum(data.astype(np.float32)) * z_factor
-        return VolumeResult(volume=float(volume), units="cubic_pixels")
+        # The area of a single pixel in square meters
+        pixel_area_sq_meters = (1.0 / pixels_per_meter) ** 2
+
+        # Total volume is the sum of the heights of all pixels,
+        # each multiplied by the area of one pixel and the z-factor.
+        volume_in_cubic_meters = (
+            np.sum(data.astype(np.float64)) * z_factor * pixel_area_sq_meters
+        )
+
+        # Convert to the desired output unit
+        converter = UnitConverter(pixels_per_meter)
+        converted_volume = converter.convert_volume(
+            volume_in_cubic_meters, "cubic_meters", unit
+        )
+
+        return VolumeResult(volume=converted_volume, units=unit)
 
 
 class ArcLengthStrategy(IAnalysisStrategy):
@@ -84,23 +88,28 @@ class ArcLengthStrategy(IAnalysisStrategy):
     ) -> ArcLengthResult:
         """
         Computes the arc length of the given path.
-
-        Args:
-            data (Union[NDArray[np.float64], List[Tuple[float, float]]]):
-                A NumPy array of shape (N, 2) or a list of (x, y) tuples.
-            **kwargs: Not used for arc length calculation, but kept for
-                      interface consistency.
-
-        Returns:
-            ArcLengthResult: An object containing the calculated arc length.
         """
-        # The `calculate_arc_length` utility function handles conversion and validation.
-        length = calculate_arc_length(data)
+        pixels_per_meter = kwargs.get("pixels_per_meter", 1.0)
+        z_factor = kwargs.get("z_factor", 1.0)
+        unit = kwargs.get("unit", "meters")
 
-        # If data is a numpy array, we can store it directly.
-        # If it's a list of tuples, convert to numpy array for consistency.
+        # Define the scale for each axis
+        scale_x = 1.0 / pixels_per_meter  # meters per pixel
+        scale_z = z_factor / 255.0  # Assuming 8-bit data, normalized height
+
+        # The y-values in `data` represent height, so we use scale_z
+        length_in_meters = calculate_arc_length(data, scale_x=scale_x, scale_y=scale_z)
+
+        # Convert to the desired output unit
+        converter = UnitConverter(pixels_per_meter)
+        converted_length = converter.convert_distance(length_in_meters, "meters", unit)
+
         path_points_array = (
             np.asarray(data, dtype=np.float64) if isinstance(data, list) else data
         )
 
-        return ArcLengthResult(length=length, path_points=path_points_array)
+        return ArcLengthResult(
+            length=converted_length,
+            units=unit,
+            path_points=path_points_array,
+        )

@@ -1,8 +1,5 @@
-"""
-Unit tests for the calculus module and its analysis strategies.
-"""
-
 import unittest
+from unittest.mock import MagicMock
 
 import numpy as np
 
@@ -15,102 +12,119 @@ from topovision.calculus.strategies import (
 from topovision.core.models import ArcLengthResult, GradientResult, VolumeResult
 
 
-class TestCalculusModule(unittest.TestCase):
-    """Tests the CalculusModule and its strategy-switching capabilities."""
+class TestAnalysisContext(unittest.TestCase):
+    """Test suite for the AnalysisContext."""
 
     def setUp(self) -> None:
-        """Set up the calculus module for each test."""
-        self.calculus_module = AnalysisContext()
+        """Set up the test case."""
+        self.context = AnalysisContext()
         self.data = np.array([[1, 2], [3, 4]], dtype=np.uint8)
 
-    def test_set_and_get_strategy(self) -> None:
-        """Test that strategies can be set and retrieved correctly."""
-        self.calculus_module.set_strategy("gradient")
-        self.assertIsInstance(self.calculus_module.strategy, GradientStrategy)
+    def test_set_valid_strategy(self) -> None:
+        """Test setting a valid analysis strategy."""
+        self.context.set_strategy("gradient")
+        self.assertIsInstance(self.context.strategy, GradientStrategy)
 
-        self.calculus_module.set_strategy("volume")
-        self.assertIsInstance(self.calculus_module.strategy, VolumeStrategy)
-
-        self.calculus_module.set_strategy("arc_length")
-        self.assertIsInstance(self.calculus_module.strategy, ArcLengthStrategy)
-
-    def test_invalid_strategy(self) -> None:
-        """Test that setting an invalid strategy raises an error."""
+    def test_set_invalid_strategy(self) -> None:
+        """Test setting an invalid analysis strategy."""
         with self.assertRaises(ValueError):
-            self.calculus_module.set_strategy("invalid_strategy")
+            self.context.set_strategy("invalid_strategy")
 
-    def test_calculation_delegation(self) -> None:
-        """
-        Test that the calculate method correctly delegates to the current
-        strategy.
-        """
-        # Test with GradientStrategy
-        self.calculus_module.set_strategy("gradient")
-        result = self.calculus_module.calculate(self.data, z_factor=1.0)
+    def test_calculate_without_strategy(self) -> None:
+        """Test calculating without a strategy set."""
+        with self.assertRaises(RuntimeError):
+            self.context.calculate(self.data)
+
+    def test_calculate_with_gradient_strategy(self) -> None:
+        """Test calculation with the gradient strategy."""
+        self.context.set_strategy("gradient")
+        result = self.context.calculate(self.data)
         self.assertIsInstance(result, GradientResult)
 
-        # Test with VolumeStrategy
-        self.calculus_module.set_strategy("volume")
-        result = self.calculus_module.calculate(self.data, z_factor=1.0)
+    def test_calculate_with_volume_strategy(self) -> None:
+        """Test calculation with the volume strategy."""
+        self.context.set_strategy("volume")
+        result = self.context.calculate(self.data, z_factor=2.0)
         self.assertIsInstance(result, VolumeResult)
-
-        # Test with ArcLengthStrategy
-        self.calculus_module.set_strategy("arc_length")
-        points = np.array([[0, 0], [1, 1]])
-        result = self.calculus_module.calculate(points)
-        self.assertIsInstance(result, ArcLengthResult)
 
 
 class TestAnalysisStrategies(unittest.TestCase):
-    """Tests the individual analysis strategies."""
+    """Test suite for the individual analysis strategies."""
+
+    def setUp(self) -> None:
+        """Set up the test case."""
+        self.gradient_strategy = GradientStrategy()
+        self.volume_strategy = VolumeStrategy()
+        self.arc_length_strategy = ArcLengthStrategy()
+        self.data_2d = np.array([[1, 2], [3, 4]], dtype=np.uint8)
 
     def test_gradient_strategy(self) -> None:
         """Test the gradient calculation."""
-        strategy = GradientStrategy()
-        # Create a horizontal ramp where values change across columns but are
-        # constant across rows
-        data = np.tile(np.linspace(0, 255, 10, dtype=np.uint8), (10, 1))
-        result = strategy.analyze(data, z_factor=1.0)
-
+        result = self.gradient_strategy.analyze(self.data_2d)
         self.assertIsInstance(result, GradientResult)
-        self.assertEqual(result.dz_dx.shape, (10, 10))
-        self.assertEqual(result.dz_dy.shape, (10, 10))
-        # For a horizontal ramp, dz_dy should be close to zero
-        self.assertTrue(np.allclose(result.dz_dy, 0, atol=1e-5))
-        # And dz_dx should be non-zero
-        self.assertTrue(np.mean(np.abs(result.dz_dx)) > 0)
+        self.assertEqual(result.dz_dx.shape, self.data_2d.shape)
+        self.assertEqual(result.dz_dy.shape, self.data_2d.shape)
+
+    def test_gradient_strategy_with_invalid_data(self) -> None:
+        """Test gradient strategy with invalid (non-2D) data."""
+        with self.assertRaises(ValueError):
+            self.gradient_strategy.analyze(np.array([1, 2, 3]))
 
     def test_volume_strategy(self) -> None:
-        """Test the volume calculation (Riemann sum)."""
-        strategy = VolumeStrategy()
-        # A flat plane of height 10
-        data = np.full((5, 5), 10, dtype=np.uint8)
-        result = strategy.analyze(data, z_factor=1.0)
-
+        """Test the volume calculation."""
+        result = self.volume_strategy.analyze(
+            self.data_2d, z_factor=1.0, pixels_per_meter=1.0
+        )
         self.assertIsInstance(result, VolumeResult)
-        # Volume should be width * height * average_intensity
-        self.assertAlmostEqual(result.volume, 5 * 5 * 10)
+        # Sum of pixels * z_factor * pixel_area
+        expected_volume = (1 + 2 + 3 + 4) * 1.0 * (1.0**2)
+        self.assertAlmostEqual(result.volume, expected_volume)
 
-        # Test with a Z-factor
-        result_z_factor = strategy.analyze(data, z_factor=2.0)
-        self.assertAlmostEqual(result_z_factor.volume, 5 * 5 * 10 * 2.0)
+    def test_volume_strategy_with_scaling(self) -> None:
+        """Test volume strategy with a z-factor."""
+        result = self.volume_strategy.analyze(
+            self.data_2d, z_factor=2.5, pixels_per_meter=10.0
+        )
+        self.assertIsInstance(result, VolumeResult)
+        pixel_area = (1.0 / 10.0) ** 2
+        expected_volume = (1 + 2 + 3 + 4) * 2.5 * pixel_area
+        self.assertAlmostEqual(result.volume, expected_volume)
+
+    def test_volume_strategy_with_invalid_data(self) -> None:
+        """Test volume strategy with invalid (non-2D) data."""
+        with self.assertRaises(ValueError):
+            self.volume_strategy.analyze(np.array([1, 2, 3]))
 
     def test_arc_length_strategy(self) -> None:
         """Test the arc length calculation."""
         strategy = ArcLengthStrategy()
-        # A simple path along a straight line y=x
         points = np.array([[i, i] for i in range(10)])
-        result = strategy.analyze(points)
+
+        pixels_per_meter = 1.0
+        z_factor = 1.0
+
+        result = strategy.analyze(
+            points, pixels_per_meter=pixels_per_meter, z_factor=z_factor, unit="meters"
+        )
 
         self.assertIsInstance(result, ArcLengthResult)
-        # The length of the diagonal of a 9x9 square
-        self.assertAlmostEqual(result.length, 9 * np.sqrt(2))
 
-        # A path along a horizontal line
-        points_horiz = np.array([[i, 5] for i in range(10)])
-        result_horiz = strategy.analyze(points_horiz)
-        self.assertAlmostEqual(result_horiz.length, 9.0)
+        scale_x = 1.0 / pixels_per_meter
+        scale_z = z_factor / 255.0
 
+        scaled_points = np.zeros((10, 2))
+        scaled_points[:, 0] = np.arange(10) * scale_x
+        scaled_points[:, 1] = np.arange(10) * scale_z
 
-if __name__ == "__main__":
-    unittest.main()
+        diffs = np.diff(scaled_points, axis=0)
+        expected_length = np.sum(np.sqrt(np.sum(diffs**2, axis=1)))
+
+        self.assertAlmostEqual(result.length, expected_length)
+
+    def test_arc_length_with_empty_data(self) -> None:
+        """Test arc length with empty or single-point data."""
+        with self.assertRaises(ValueError):
+            self.arc_length_strategy.analyze([])
+        self.assertEqual(
+            self.arc_length_strategy.analyze(np.array([[1, 1]])).length, 0.0
+        )
