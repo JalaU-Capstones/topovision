@@ -1,17 +1,16 @@
-import time  # For measuring update time
+import time
 import tkinter as tk
 from tkinter import ttk
-from typing import Any, Optional, Tuple
+from typing import Any, Optional, Tuple, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.axes import Axes
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg,
     NavigationToolbar2Tk,
 )
 from matplotlib.figure import Figure
-from mpl_toolkits.mplot3d import Axes3D  # Import Axes3D
+from mpl_toolkits.mplot3d import Axes3D
 from numpy.typing import NDArray
 
 from topovision.gui.i18n import get_translator
@@ -219,7 +218,7 @@ class Plot3DWindow(tk.Toplevel):
         if not self.winfo_exists():  # Check if the Toplevel window still exists
             return
 
-        self._clear_plot()  # Clear any previous plot
+        self._reset_plot_state()  # Clear any previous plot
 
         rstride = self.resolution_var.get()
         cstride = self.resolution_var.get()
@@ -341,7 +340,7 @@ class Plot3DWindow(tk.Toplevel):
                 zlabel="Height (Z)",
             )
         else:
-            self._clear_plot()
+            self._reset_plot_state()  # Renamed _clear_plot
             self.message_label.pack(expand=True)
 
     def _draw_plot(self) -> None:
@@ -365,33 +364,32 @@ class Plot3DWindow(tk.Toplevel):
                 self.toolbar.destroy()
                 self.toolbar = None
 
-            self.canvas_agg = FigureCanvasTkAgg(
-                self.fig, master=self.plot_frame
-            )  # Removed unused ignore
-            self.canvas_widget = (
-                self.canvas_agg.get_tk_widget()
-            )  # Removed unused ignore
+            self.canvas_agg = cast(
+                FigureCanvasTkAgg, FigureCanvasTkAgg(self.fig, master=self.plot_frame)
+            )
+            self.canvas_widget = cast(tk.Widget, self.canvas_agg.get_tk_widget())
             if self.canvas_widget:  # Check for None before calling pack
                 self.canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-            self.toolbar = NavigationToolbar2Tk(
-                self.canvas_agg, self.plot_frame
-            )  # Removed unused ignore
+            self.toolbar = cast(
+                NavigationToolbar2Tk,
+                NavigationToolbar2Tk(self.canvas_agg, self.plot_frame),
+            )
             self.toolbar.update()
-            self.canvas_agg.draw()  # Removed unused ignore
+            self.canvas_agg.draw()
         else:
             self.message_label.pack(expand=True)
 
     def clear_plot_data(self) -> None:
         """Clears the current plot and resets stored data."""
         self.stop_live_update()  # Stop the update loop
-        self._clear_plot()
+        self._reset_plot_state()  # Renamed _clear_plot
         self._latest_x_data = None
         self._latest_y_data = None
         self._latest_z_data = None
         self.message_label.pack(expand=True)  # Show message again
 
-    def _clear_plot(self) -> None:
+    def _reset_plot_state(self) -> None:  # Renamed _clear_plot
         """Clears the current plot from the window."""
         if self.canvas_widget:
             self.canvas_widget.pack_forget()  # Explicitly remove from layout
@@ -414,7 +412,7 @@ class Plot3DWindow(tk.Toplevel):
     def _on_close(self) -> None:
         """Handles window closing event."""
         self.stop_live_update()  # Ensure update loop is stopped
-        self._clear_plot()
+        self._reset_plot_state()  # Renamed _clear_plot
         self.destroy()
 
 
@@ -427,7 +425,7 @@ if __name__ == "__main__":
 
     # Example: Initial 3D Surface Plot
     def f(x: NDArray[Any], y: NDArray[Any]) -> NDArray[Any]:  # Use NDArray[Any]
-        return np.sin(np.sqrt(x**2 + y**2))
+        return cast(NDArray[Any], np.sin(np.sqrt(x**2 + y**2)))  # Added cast
 
     x = np.linspace(-5, 5, 100)  # Full resolution data
     y = np.linspace(-5, 5, 100)

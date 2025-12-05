@@ -276,10 +276,10 @@ class MainWindow(Tk):
                 + np.linalg.norm(np.array(br) - np.array(tr))
             ) / 2
             width_unit = self.unit_converter.convert_distance(
-                width_corr, "pixels", unit
+                cast(float, width_corr), "pixels", unit  # Cast to float
             )
             height_unit = self.unit_converter.convert_distance(
-                height_corr, "pixels", unit
+                cast(float, height_corr), "pixels", unit  # Cast to float
             )
         else:
             width_unit = self.unit_converter.convert_distance(width_px, "pixels", unit)
@@ -342,9 +342,12 @@ class MainWindow(Tk):
                 [[rx1, ry1], [rx2, ry1], [rx2, ry2], [rx1, ry2]], dtype=np.float32
             )
 
-            transformed_corners: NDArray[np.float32] = cv2.perspectiveTransform(
-                np.array([src_quad]), self.perspective_corrector.matrix
-            )[0]
+            transformed_corners: NDArray[np.float32] = cast(
+                NDArray[np.float32],
+                cv2.perspectiveTransform(
+                    np.array([src_quad]), self.perspective_corrector.matrix
+                )[0],
+            )
 
             rect = cv2.boundingRect(transformed_corners)
             dst_w, dst_h = rect[2], rect[3]
@@ -357,11 +360,11 @@ class MainWindow(Tk):
                 dtype=np.float32,
             )
 
-            local_matrix: NDArray[np.float32] = cv2.getPerspectiveTransform(
-                src_quad, dst_rect
+            local_matrix: NDArray[np.float32] = cast(
+                NDArray[np.float32], cv2.getPerspectiveTransform(src_quad, dst_rect)
             )
-            inverse_local_matrix = cv2.getPerspectiveTransform(
-                dst_rect, src_quad
+            inverse_local_matrix = cast(
+                NDArray[np.float32], cv2.getPerspectiveTransform(dst_rect, src_quad)
             )  # This is where it's defined
 
             warped_roi: NDArray[Any] = cv2.warpPerspective(
@@ -496,9 +499,9 @@ class MainWindow(Tk):
         w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
         if w > 1 and h > 1:
             resized_img = pil_image.resize((w, h), Image.Resampling.LANCZOS)
-            self._analysis_result_photo = cast(
-                ImageTk.PhotoImage, ImageTk.PhotoImage(image=resized_img)
-            )
+            self._analysis_result_photo = ImageTk.PhotoImage(
+                image=resized_img
+            )  # Removed redundant cast
             self.is_showing_analysis = True
             self.set_status(self._("analysis_completed"))
             self._refresh_gui_display()
@@ -569,9 +572,12 @@ class MainWindow(Tk):
                 [[rx1, ry1], [rx2, ry1], [rx2, ry2], [rx1, ry2]], dtype=np.float32
             )
 
-            transformed_corners: NDArray[np.float32] = cv2.perspectiveTransform(
-                np.array([src_quad]), self.perspective_corrector.matrix
-            )[0]
+            transformed_corners: NDArray[np.float32] = cast(
+                NDArray[np.float32],
+                cv2.perspectiveTransform(
+                    np.array([src_quad]), self.perspective_corrector.matrix
+                )[0],
+            )
 
             rect = cv2.boundingRect(transformed_corners)
             dst_w, dst_h = rect[2], rect[3]
@@ -584,8 +590,8 @@ class MainWindow(Tk):
                 dtype=np.float32,
             )
 
-            local_matrix: NDArray[np.float32] = cv2.getPerspectiveTransform(
-                src_quad, dst_rect
+            local_matrix: NDArray[np.float32] = cast(
+                NDArray[np.float32], cv2.getPerspectiveTransform(src_quad, dst_rect)
             )
             warped_roi: NDArray[Any] = cv2.warpPerspective(
                 self._last_frame, local_matrix, (dst_w, dst_h)
@@ -593,21 +599,31 @@ class MainWindow(Tk):
 
             gray_region = cv2.cvtColor(warped_roi, cv2.COLOR_RGB2GRAY)
 
-            real_width = (
+            real_width = cast(
+                float,
                 (
-                    np.linalg.norm(transformed_corners[1] - transformed_corners[0])
-                    + np.linalg.norm(transformed_corners[2] - transformed_corners[3])
-                )
-                / 2
-                * meters_per_pixel
+                    (
+                        np.linalg.norm(transformed_corners[1] - transformed_corners[0])
+                        + np.linalg.norm(
+                            transformed_corners[2] - transformed_corners[3]
+                        )
+                    )
+                    / 2
+                    * meters_per_pixel
+                ),
             )
-            real_height = (
+            real_height = cast(
+                float,
                 (
-                    np.linalg.norm(transformed_corners[3] - transformed_corners[0])
-                    + np.linalg.norm(transformed_corners[2] - transformed_corners[1])
-                )
-                / 2
-                * meters_per_pixel
+                    (
+                        np.linalg.norm(transformed_corners[3] - transformed_corners[0])
+                        + np.linalg.norm(
+                            transformed_corners[2] - transformed_corners[1]
+                        )
+                    )
+                    / 2
+                    * meters_per_pixel
+                ),
             )
 
             x_coords = np.linspace(0, real_width, dst_w)
@@ -623,8 +639,8 @@ class MainWindow(Tk):
             gray_region = cv2.cvtColor(region_data, cv2.COLOR_RGB2GRAY)
             rows, cols = gray_region.shape
 
-            real_width = cols * meters_per_pixel
-            real_height = rows * meters_per_pixel
+            real_width = cast(float, cols * meters_per_pixel)
+            real_height = cast(float, rows * meters_per_pixel)
 
             x_coords = np.linspace(0, real_width, cols)
             y_coords = np.linspace(0, real_height, rows)
@@ -640,7 +656,9 @@ class MainWindow(Tk):
             img = cast(
                 Image.Image, Image.fromarray(cv2.cvtColor(resized, cv2.COLOR_BGR2RGB))
             )
-            self.photo = cast(ImageTk.PhotoImage, ImageTk.PhotoImage(image=img))
+            self.photo = cast(
+                ImageTk.PhotoImage, ImageTk.PhotoImage(image=img)
+            )  # Added cast
             self._refresh_gui_display()
 
     def _refresh_gui_display(self) -> None:

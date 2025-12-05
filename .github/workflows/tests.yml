@@ -36,4 +36,4 @@ jobs:
       - name: Run Pytest
         env:
           PYTHONPATH: ${{ github.workspace }}/src
-        run: pytest src/topovision/tests/ --maxfail=1 --disable-warnings -q
+        run: pytest --maxfail=1 --disable-warnings -q # Changed to just 'pytest'

@@ -66,7 +66,7 @@ def generate_heatmap(
 
     # 3. Apply dark theme to color bar elements
     # Explicitly cast cbar.outline to Spine to help mypy
-    cbar_outline: Spine = cbar.outline
+    cbar_outline: Spine = cast(Spine, cbar.outline)  # Added cast
     cbar.ax.yaxis.set_tick_params(color=TEXT_COLOR)
     cbar_outline.set_edgecolor("none")
     plt.setp(plt.getp(cbar.ax.axes, "yticklabels"), color=TEXT_COLOR, fontsize=8)

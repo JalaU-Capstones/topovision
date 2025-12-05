@@ -1,10 +1,8 @@
-from typing import Optional
+from typing import Optional, cast  # Import cast
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.axes import Axes
 from matplotlib.collections import LineCollection
-from matplotlib.colors import Normalize
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
@@ -136,7 +134,7 @@ if __name__ == "__main__":
     def f(
         x: NDArray[np.float64], y: NDArray[np.float64]
     ) -> NDArray[np.float64]:  # Added return type
-        return np.sin(np.sqrt(x**2 + y**2))
+        return cast(NDArray[np.float64], np.sin(np.sqrt(x**2 + y**2)))  # Added cast
 
     x = np.linspace(-5, 5, 100)
     y = np.linspace(-5, 5, 100)

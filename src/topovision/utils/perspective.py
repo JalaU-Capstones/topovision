@@ -2,7 +2,7 @@
 A module for handling perspective correction in TopoVision.
 """
 
-from typing import List, Tuple
+from typing import List, Tuple, cast
 
 import cv2
 import numpy as np
@@ -62,11 +62,13 @@ class PerspectiveCorrector:
         self.pixels_per_meter = self.dst_width_px / self.real_width
 
         # Compute the perspective transformation matrix
-        self.matrix: NDArray[np.float32] = cv2.getPerspectiveTransform(
-            self.src_points, self.dst_points
+        self.matrix: NDArray[np.float32] = cast(
+            NDArray[np.float32],
+            cv2.getPerspectiveTransform(self.src_points, self.dst_points),
         )
-        self.inverse_matrix: NDArray[np.float32] = cv2.getPerspectiveTransform(
-            self.dst_points, self.src_points
+        self.inverse_matrix: NDArray[np.float32] = cast(
+            NDArray[np.float32],
+            cv2.getPerspectiveTransform(self.dst_points, self.src_points),
         )
 
     def transform_point(self, point: Tuple[float, float]) -> Tuple[float, float]:
@@ -95,6 +97,9 @@ class PerspectiveCorrector:
             NDArray[np.uint8]: The resulting top-down image.
         """
         # cv2.warpPerspective should return the same dtype as the input image
-        return cv2.warpPerspective(
-            image, self.matrix, (self.dst_width_px, self.dst_height_px)
+        return cast(
+            NDArray[np.uint8],
+            cv2.warpPerspective(
+                image, self.matrix, (self.dst_width_px, self.dst_height_px)
+            ),
         )

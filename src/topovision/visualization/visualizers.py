@@ -74,8 +74,10 @@ class HeatmapVisualizer:
             mask = np.zeros(
                 (original_image.height, original_image.width), dtype=np.uint8
             )
-            # Ensure src_quad is int32 for fillConvexPoly
-            cv2.fillConvexPoly(mask, src_quad.astype(np.int32), 255)
+            # Ensure src_quad is int32 for fillConvexPoly and color is a sequence
+            cv2.fillConvexPoly(
+                mask, src_quad.astype(np.int32), (255,)
+            )  # Changed 255 to (255,)
 
             # Blend using the mask
             original_np = cv2.cvtColor(np.array(original_image), cv2.COLOR_RGB2BGR)
