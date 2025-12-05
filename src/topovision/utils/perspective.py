@@ -34,7 +34,7 @@ class PerspectiveCorrector:
         if real_width <= 0 or real_height <= 0:
             raise ValueError("Real-world dimensions must be positive.")
 
-        self.src_points = np.float32(src_points)
+        self.src_points: NDArray[np.float32] = np.array(src_points, dtype=np.float32)
         self.real_width = real_width
         self.real_height = real_height
 
@@ -48,21 +48,24 @@ class PerspectiveCorrector:
             self.dst_height_px = 1000
             self.dst_width_px = int(1000 * real_width / real_height)
 
-        self.dst_points = np.float32(
+        self.dst_points: NDArray[np.float32] = np.array(
             [
                 [0, 0],
                 [self.dst_width_px - 1, 0],
                 [self.dst_width_px - 1, self.dst_height_px - 1],
                 [0, self.dst_height_px - 1],
-            ]
+            ],
+            dtype=np.float32,
         )
 
         # The scale of the orthographic (top-down) view
         self.pixels_per_meter = self.dst_width_px / self.real_width
 
         # Compute the perspective transformation matrix
-        self.matrix = cv2.getPerspectiveTransform(self.src_points, self.dst_points)
-        self.inverse_matrix = cv2.getPerspectiveTransform(
+        self.matrix: NDArray[np.float32] = cv2.getPerspectiveTransform(
+            self.src_points, self.dst_points
+        )
+        self.inverse_matrix: NDArray[np.float32] = cv2.getPerspectiveTransform(
             self.dst_points, self.src_points
         )
 
@@ -76,9 +79,10 @@ class PerspectiveCorrector:
         Returns:
             Tuple[float, float]: The corrected (x, y) coordinate in the top-down view.
         """
-        point_np = np.float32([[point]])
+        point_np: NDArray[np.float32] = np.array([[point]], dtype=np.float32)
         transformed_point = cv2.perspectiveTransform(point_np, self.matrix)
-        return (transformed_point[0][0][0], transformed_point[0][0][1])
+        # The output of perspectiveTransform is an array of shape (1, 1, 2)
+        return (float(transformed_point[0][0][0]), float(transformed_point[0][0][1]))
 
     def warp_image(self, image: NDArray[np.uint8]) -> NDArray[np.uint8]:
         """
@@ -90,6 +94,7 @@ class PerspectiveCorrector:
         Returns:
             NDArray[np.uint8]: The resulting top-down image.
         """
+        # cv2.warpPerspective should return the same dtype as the input image
         return cv2.warpPerspective(
             image, self.matrix, (self.dst_width_px, self.dst_height_px)
         )

@@ -12,6 +12,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, cast
 
 import cv2
 import numpy as np
+from numpy.typing import NDArray
 from PIL import Image, ImageTk
 
 from topovision.calculus.calculus_module import AnalysisContext
@@ -77,7 +78,7 @@ class MainWindow(Tk):
         self._analysis_result_photo: Optional[ImageTk.PhotoImage] = None
         self.is_showing_analysis: bool = False
         self.selected_region: Optional[Tuple[int, int, int, int]] = None
-        self._last_frame: Optional[np.ndarray] = None
+        self._last_frame: Optional[NDArray[Any]] = None  # Use NDArray[Any]
         self._canvas_image_id: Optional[int] = None
         self.plot3d_window: Optional[Plot3DWindow] = None
 
@@ -330,11 +331,18 @@ class MainWindow(Tk):
         rx2, ry2 = int(x2 * w / canvas_w), int(y2 * h / canvas_h)
 
         calc_result_data: Dict[str, Any] = {}
+        data_for_analysis_image: NDArray[Any]  # Use NDArray[Any]
+
+        # Initialize these variables to None
+        inverse_local_matrix: Optional[NDArray[np.float32]] = None
+        src_quad: Optional[NDArray[np.float32]] = None
 
         if self.perspective_corrector:
-            src_quad = np.float32([[rx1, ry1], [rx2, ry1], [rx2, ry2], [rx1, ry2]])
+            src_quad = np.array(
+                [[rx1, ry1], [rx2, ry1], [rx2, ry2], [rx1, ry2]], dtype=np.float32
+            )
 
-            transformed_corners = cv2.perspectiveTransform(
+            transformed_corners: NDArray[np.float32] = cv2.perspectiveTransform(
                 np.array([src_quad]), self.perspective_corrector.matrix
             )[0]
 
@@ -344,29 +352,39 @@ class MainWindow(Tk):
             if dst_w < 1 or dst_h < 1:
                 raise RuntimeError("Region too small after perspective correction.")
 
-            dst_rect = np.float32(
-                [[0, 0], [dst_w - 1, 0], [dst_w - 1, dst_h - 1], [0, dst_h - 1]]
+            dst_rect: NDArray[np.float32] = np.array(
+                [[0, 0], [dst_w - 1, 0], [dst_w - 1, dst_h - 1], [0, dst_h - 1]],
+                dtype=np.float32,
             )
 
-            local_matrix = cv2.getPerspectiveTransform(src_quad, dst_rect)
-            inverse_local_matrix = cv2.getPerspectiveTransform(dst_rect, src_quad)
+            local_matrix: NDArray[np.float32] = cv2.getPerspectiveTransform(
+                src_quad, dst_rect
+            )
+            inverse_local_matrix = cv2.getPerspectiveTransform(
+                dst_rect, src_quad
+            )  # This is where it's defined
 
-            warped_roi = cv2.warpPerspective(
+            warped_roi: NDArray[Any] = cv2.warpPerspective(
                 self._last_frame, local_matrix, (dst_w, dst_h)
             )
             data_for_analysis_image = warped_roi
 
-            calc_result_data["inverse_matrix"] = inverse_local_matrix
-            calc_result_data["src_quad"] = src_quad
         else:
             data_for_analysis_image = self._last_frame[ry1:ry2, rx1:rx2]
 
+        # Assign these outside the if block
+        calc_result_data["inverse_matrix"] = inverse_local_matrix
+        calc_result_data["src_quad"] = src_quad
+
+        data_for_analysis: NDArray[Any]  # Use NDArray[Any]
         if method in ["gradient", "volume"]:
-            data_for_analysis: np.ndarray = cv2.cvtColor(
+            data_for_analysis = cv2.cvtColor(
                 data_for_analysis_image, cv2.COLOR_RGB2GRAY
             )
         elif method == "arc_length":
-            gray_region = cv2.cvtColor(data_for_analysis_image, cv2.COLOR_RGB2GRAY)
+            gray_region: NDArray[Any] = cv2.cvtColor(
+                data_for_analysis_image, cv2.COLOR_RGB2GRAY
+            )  # Use NDArray[Any]
             middle_row_idx = gray_region.shape[0] // 2
             points = [
                 (i, gray_region[middle_row_idx, i]) for i in range(gray_region.shape[1])
@@ -382,10 +400,10 @@ class MainWindow(Tk):
         elif method == "arc_length":
             calc_kwargs["unit"] = unit
 
-        result = self.calculus_module.calculate(data_for_analysis, **calc_kwargs)
+        result_obj = self.calculus_module.calculate(data_for_analysis, **calc_kwargs)
 
         calc_result_data.update(
-            {"method": method, "result": result, "region": self.selected_region}
+            {"method": method, "result": result_obj, "region": self.selected_region}
         )
         return calc_result_data
 
@@ -420,7 +438,9 @@ class MainWindow(Tk):
                 )
             )
             if self._last_frame is not None:
-                original_image_pil = Image.fromarray(self._last_frame)
+                original_image_pil = cast(
+                    Image.Image, Image.fromarray(self._last_frame)
+                )
                 analysis_result = AnalysisResult(method, calc_result, region)
                 heatmap = self.visualizer.visualize(
                     analysis_result,
@@ -476,7 +496,9 @@ class MainWindow(Tk):
         w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
         if w > 1 and h > 1:
             resized_img = pil_image.resize((w, h), Image.Resampling.LANCZOS)
-            self._analysis_result_photo = ImageTk.PhotoImage(image=resized_img)
+            self._analysis_result_photo = cast(
+                ImageTk.PhotoImage, ImageTk.PhotoImage(image=resized_img)
+            )
             self.is_showing_analysis = True
             self.set_status(self._("analysis_completed"))
             self._refresh_gui_display()
@@ -513,7 +535,9 @@ class MainWindow(Tk):
                     self.plot3d_window.set_latest_data(*self._prepare_3d_plot_data())
         self.after(15, self._update_frame)
 
-    def _prepare_3d_plot_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _prepare_3d_plot_data(
+        self,
+    ) -> Tuple[NDArray[Any], NDArray[Any], NDArray[Any]]:  # Use NDArray[Any]
         if not self.selected_region or self._last_frame is None:
             return np.array([]), np.array([]), np.array([])
 
@@ -532,12 +556,42 @@ class MainWindow(Tk):
 
         meters_per_pixel = 1.0 / scale
 
-        if self.perspective_corrector:
-            src_quad = np.float32([[rx1, ry1], [rx2, ry1], [rx2, ry2], [rx1, ry2]])
+        # Initialize variables before conditional blocks
+        real_width: float = 0.0
+        real_height: float = 0.0
+        gray_region: NDArray[Any] = np.array([])
+        x_coords: NDArray[np.float64] = np.array([])
+        y_coords: NDArray[np.float64] = np.array([])
+        Z: NDArray[np.float64] = np.array([])
 
-            transformed_corners = cv2.perspectiveTransform(
+        if self.perspective_corrector:
+            src_quad: NDArray[np.float32] = np.array(
+                [[rx1, ry1], [rx2, ry1], [rx2, ry2], [rx1, ry2]], dtype=np.float32
+            )
+
+            transformed_corners: NDArray[np.float32] = cv2.perspectiveTransform(
                 np.array([src_quad]), self.perspective_corrector.matrix
             )[0]
+
+            rect = cv2.boundingRect(transformed_corners)
+            dst_w, dst_h = rect[2], rect[3]
+
+            if dst_w < 1 or dst_h < 1:
+                return np.array([]), np.array([]), np.array([])
+
+            dst_rect: NDArray[np.float32] = np.array(
+                [[0, 0], [dst_w - 1, 0], [dst_w - 1, dst_h - 1], [0, dst_h - 1]],
+                dtype=np.float32,
+            )
+
+            local_matrix: NDArray[np.float32] = cv2.getPerspectiveTransform(
+                src_quad, dst_rect
+            )
+            warped_roi: NDArray[Any] = cv2.warpPerspective(
+                self._last_frame, local_matrix, (dst_w, dst_h)
+            )
+
+            gray_region = cv2.cvtColor(warped_roi, cv2.COLOR_RGB2GRAY)
 
             real_width = (
                 (
@@ -556,34 +610,13 @@ class MainWindow(Tk):
                 * meters_per_pixel
             )
 
-            dst_w_px = 500
-            dst_h_px = (
-                int(dst_w_px * (real_height / real_width)) if real_width > 0 else 500
-            )
-
-            dst_rect = np.float32(
-                [
-                    [0, 0],
-                    [dst_w_px - 1, 0],
-                    [dst_w_px - 1, dst_h_px - 1],
-                    [0, dst_h_px - 1],
-                ]
-            )
-
-            local_matrix = cv2.getPerspectiveTransform(src_quad, dst_rect)
-            warped_roi = cv2.warpPerspective(
-                self._last_frame, local_matrix, (dst_w_px, dst_h_px)
-            )
-
-            gray_region = cv2.cvtColor(warped_roi, cv2.COLOR_RGB2GRAY)
-
-            x_coords = np.linspace(0, real_width, dst_w_px)
-            y_coords = np.linspace(0, real_height, dst_h_px)
+            x_coords = np.linspace(0, real_width, dst_w)
+            y_coords = np.linspace(0, real_height, dst_h)
             X, Y = np.meshgrid(x_coords, y_coords)
             Z = gray_region * z_factor * meters_per_pixel
 
         else:
-            region_data = self._last_frame[ry1:ry2, rx1:rx2]
+            region_data: NDArray[Any] = self._last_frame[ry1:ry2, rx1:rx2]
             if region_data.size == 0:
                 return np.array([]), np.array([]), np.array([])
 
@@ -600,12 +633,14 @@ class MainWindow(Tk):
 
         return X, Y, Z
 
-    def _update_canvas_image(self, frame: np.ndarray) -> None:
+    def _update_canvas_image(self, frame: NDArray[Any]) -> None:  # Use NDArray[Any]
         w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
         if w > 1 and h > 1:
             resized = cv2.resize(frame, (w, h), interpolation=cv2.INTER_AREA)
-            img = Image.fromarray(cv2.cvtColor(resized, cv2.COLOR_BGR2RGB))
-            self.photo = ImageTk.PhotoImage(image=img)
+            img = cast(
+                Image.Image, Image.fromarray(cv2.cvtColor(resized, cv2.COLOR_BGR2RGB))
+            )
+            self.photo = cast(ImageTk.PhotoImage, ImageTk.PhotoImage(image=img))
             self._refresh_gui_display()
 
     def _refresh_gui_display(self) -> None:

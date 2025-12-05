@@ -4,7 +4,7 @@ IAnalysisStrategy interface. Each strategy encapsulates a specific
 topographic calculation method.
 """
 
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Tuple, Union, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -83,9 +83,7 @@ class ArcLengthStrategy(IAnalysisStrategy):
     Calculates the arc length of a path defined by a series of 2D points.
     """
 
-    def analyze(
-        self, data: Union[NDArray[np.float64], List[Tuple[float, float]]], **kwargs: Any
-    ) -> ArcLengthResult:
+    def analyze(self, data: NDArray[np.uint8], **kwargs: Any) -> ArcLengthResult:
         """
         Computes the arc length of the given path.
         """
@@ -93,23 +91,31 @@ class ArcLengthStrategy(IAnalysisStrategy):
         z_factor = kwargs.get("z_factor", 1.0)
         unit = kwargs.get("unit", "meters")
 
+        # Cast data to the expected type for path points, assuming it's provided correctly at runtime
+        path_data = cast(Union[NDArray[np.float64], List[Tuple[float, float]]], data)
+
         # Define the scale for each axis
         scale_x = 1.0 / pixels_per_meter  # meters per pixel
         scale_z = z_factor / 255.0  # Assuming 8-bit data, normalized height
 
         # The y-values in `data` represent height, so we use scale_z
-        length_in_meters = calculate_arc_length(data, scale_x=scale_x, scale_y=scale_z)
+        length_in_meters = calculate_arc_length(
+            path_data, scale_x=scale_x, scale_y=scale_z
+        )
 
         # Convert to the desired output unit
         converter = UnitConverter(pixels_per_meter)
         converted_length = converter.convert_distance(length_in_meters, "meters", unit)
 
-        path_points_array = (
-            np.asarray(data, dtype=np.float64) if isinstance(data, list) else data
-        )
+        # Ensure path_points_array is NDArray[np.float64] for calculation, then convert to np.int32 for ArcLengthResult
+        path_points_array: NDArray[np.float64]
+        if isinstance(path_data, list):
+            path_points_array = np.asarray(path_data, dtype=np.float64)
+        else:
+            path_points_array = path_data
 
         return ArcLengthResult(
             length=converted_length,
             units=unit,
-            path_points=path_points_array,
+            path_points=path_points_array.astype(np.int32),  # Convert to np.int32
         )

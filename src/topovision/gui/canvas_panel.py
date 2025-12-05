@@ -54,7 +54,7 @@ class CanvasPanel(tk.Canvas):
         self.is_calibration_mode = False
         self.delete("calibration_point")
 
-    def _on_press(self, event: tk.Event) -> None:
+    def _on_press(self, event: tk.Event) -> None:  # Removed [Any]
         """Handles the initial click."""
         if self.is_calibration_mode:
             if len(self.calibration_points) < 4:
@@ -78,7 +78,7 @@ class CanvasPanel(tk.Canvas):
             tags="calibration_point",
         )
 
-    def _on_drag(self, event: tk.Event) -> None:
+    def _on_drag(self, event: tk.Event) -> None:  # Removed [Any]
         """Handles dragging to draw a selection rectangle."""
         if self.is_calibration_mode or not self._selection_start:
             return
@@ -91,7 +91,7 @@ class CanvasPanel(tk.Canvas):
             x1, y1, x2, y2, outline="#FFD34D", width=2, dash=(3, 2), tags="selection"
         )
 
-    def _on_release(self, event: tk.Event) -> None:
+    def _on_release(self, event: tk.Event) -> None:  # Removed [Any]
         """Finalizes the selection."""
         if self.is_calibration_mode or not self._selection_start:
             return

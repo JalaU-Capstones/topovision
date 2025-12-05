@@ -5,7 +5,7 @@ Handles camera capture and provides different camera implementations.
 import logging
 import threading
 import time
-from typing import Optional
+from typing import Optional, cast
 
 import cv2
 import numpy as np
@@ -72,7 +72,9 @@ class ThreadedOpenCVCamera(ICamera):
                 frame_number += 1
                 with self.frame_lock:
                     # Convert color space once, right after capture
-                    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    rgb_frame = cast(
+                        NDArray[np.uint8], cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    )
                     self.latest_frame = FrameData(
                         image=rgb_frame, timestamp=timestamp, frame_number=frame_number
                     )

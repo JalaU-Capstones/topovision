@@ -2,8 +2,10 @@ from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.axes import Axes
 from matplotlib.collections import LineCollection
 from matplotlib.colors import Normalize
+from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from numpy.typing import NDArray
@@ -23,8 +25,8 @@ def create_initial_surface_plot(
     rstride: int = 1,
     cstride: int = 1,
 ) -> tuple[
-    plt.Figure,
-    plt.Axes,
+    Figure,
+    Axes3D,  # Changed to Axes3D
     Poly3DCollection,
     Optional[LineCollection],
 ]:
@@ -32,8 +34,8 @@ def create_initial_surface_plot(
     Creates the initial 3D surface plot and returns the figure, axes, and the
     surface object.
     """
-    fig = plt.figure(figsize=(10, 8))
-    ax = fig.add_subplot(111, projection="3d")
+    fig: Figure = plt.figure(figsize=(10, 8))
+    ax: Axes3D = fig.add_subplot(111, projection="3d")  # Explicitly type as Axes3D
 
     surface = ax.plot_surface(
         x_data,
@@ -70,6 +72,7 @@ def create_initial_surface_plot(
     y_range = np.ptp(y_data)
     z_range = np.ptp(z_data)
     if x_range > 0 and y_range > 0 and z_range > 0:
+        # mypy might complain about this, but it's correct for Axes3D
         ax.set_box_aspect((x_range, y_range, z_range))
 
     ax.view_init(elev=30, azim=45)
@@ -79,7 +82,7 @@ def create_initial_surface_plot(
 
 
 def update_surface_plot_data(
-    ax: Axes3D,
+    ax: Axes3D,  # Changed to Axes3D
     x_data: NDArray[np.float64],
     y_data: NDArray[np.float64],
     z_data: NDArray[np.float64],
@@ -130,7 +133,9 @@ def update_surface_plot_data(
 
 if __name__ == "__main__":
 
-    def f(x: NDArray[np.float64], y: NDArray[np.float64]) -> NDArray[np.float64]:
+    def f(
+        x: NDArray[np.float64], y: NDArray[np.float64]
+    ) -> NDArray[np.float64]:  # Added return type
         return np.sin(np.sqrt(x**2 + y**2))
 
     x = np.linspace(-5, 5, 100)

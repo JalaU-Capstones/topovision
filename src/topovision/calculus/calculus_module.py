@@ -8,6 +8,7 @@ for executing different topographic analysis strategies.
 from typing import Any, Dict, Optional, Union
 
 import numpy as np
+from numpy.typing import NDArray
 
 from topovision.core.interfaces import IAnalysisStrategy
 from topovision.core.models import (
@@ -67,13 +68,15 @@ class AnalysisContext:
         self._current_strategy_name = strategy_name
 
     def calculate(
-        self, data: np.ndarray, **kwargs: Any
+        self,
+        data: NDArray[Any],
+        **kwargs: Any,  # Changed from NDArray[Any, Any] to NDArray[Any]
     ) -> Union[GradientResult, VolumeResult, ArcLengthResult]:
         """
         Performs a calculation on the given data using the current strategy.
 
         Args:
-            data (np.ndarray): The input data for the calculation.
+            data (NDArray[Any]): The input data for the calculation.
             **kwargs: Additional parameters for the calculation,
                       passed directly to the strategy.
 

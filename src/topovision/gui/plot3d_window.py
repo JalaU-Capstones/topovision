@@ -5,7 +5,14 @@ from typing import Any, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib.axes import Axes
+from matplotlib.backends.backend_tkagg import (
+    FigureCanvasTkAgg,
+    NavigationToolbar2Tk,
+)
+from matplotlib.figure import Figure
+from mpl_toolkits.mplot3d import Axes3D  # Import Axes3D
+from numpy.typing import NDArray
 
 from topovision.gui.i18n import get_translator
 from topovision.visualization.plot3d import (
@@ -30,8 +37,8 @@ class Plot3DWindow(tk.Toplevel):
         self.geometry("1000x800")  # Increased size to accommodate controls
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
-        self.fig: Optional[plt.Figure] = None
-        self.ax: Optional[plt.Axes] = None
+        self.fig: Optional[Figure] = None  # Use Figure
+        self.ax: Optional[Axes3D] = None  # Use Axes3D
         self.surface_plot_object: Optional[Any] = (
             None  # Stores the Poly3DCollection object for updates
         )
@@ -43,9 +50,9 @@ class Plot3DWindow(tk.Toplevel):
         self.canvas_agg: Optional[FigureCanvasTkAgg] = None
 
         # Store latest data received from main window
-        self._latest_x_data: Optional[np.ndarray] = None
-        self._latest_y_data: Optional[np.ndarray] = None
-        self._latest_z_data: Optional[np.ndarray] = None
+        self._latest_x_data: Optional[NDArray[Any]] = None  # Use NDArray[Any]
+        self._latest_y_data: Optional[NDArray[Any]] = None  # Use NDArray[Any]
+        self._latest_z_data: Optional[NDArray[Any]] = None  # Use NDArray[Any]
 
         # Store current stride values for updates
         self._current_rstride: int = 1
@@ -158,7 +165,10 @@ class Plot3DWindow(tk.Toplevel):
         self._redraw_plot_with_settings()
 
     def set_latest_data(
-        self, x_data: np.ndarray, y_data: np.ndarray, z_data: np.ndarray
+        self,
+        x_data: NDArray[Any],
+        y_data: NDArray[Any],
+        z_data: NDArray[Any],  # Use NDArray[Any]
     ) -> None:
         """Receives the latest data from the main window."""
         self._latest_x_data = x_data
@@ -194,9 +204,9 @@ class Plot3DWindow(tk.Toplevel):
 
     def initialize_live_surface(
         self,
-        x_data: np.ndarray,
-        y_data: np.ndarray,
-        z_data: np.ndarray,
+        x_data: NDArray[Any],  # Use NDArray[Any]
+        y_data: NDArray[Any],  # Use NDArray[Any]
+        z_data: NDArray[Any],  # Use NDArray[Any]
         title: str = "3D Surface Plot",
         xlabel: str = "X",
         ylabel: str = "Y",
@@ -241,7 +251,10 @@ class Plot3DWindow(tk.Toplevel):
         self._draw_plot()
 
     def update_live_surface(
-        self, x_data: np.ndarray, y_data: np.ndarray, z_data: np.ndarray
+        self,
+        x_data: NDArray[Any],
+        y_data: NDArray[Any],
+        z_data: NDArray[Any],  # Use NDArray[Any]
     ) -> None:
         """
         Updates the data of the live 3D surface plot.
@@ -302,7 +315,7 @@ class Plot3DWindow(tk.Toplevel):
 
             # Force a direct draw of the canvas
             if self.fig and self.fig.canvas:
-                self.fig.canvas.draw()
+                self.fig.canvas.draw()  # Removed unused ignore
                 self.fig.canvas.flush_events()  # Process events to keep GUI responsive
 
     def _redraw_plot_with_settings(self) -> None:
@@ -352,13 +365,20 @@ class Plot3DWindow(tk.Toplevel):
                 self.toolbar.destroy()
                 self.toolbar = None
 
-            self.canvas_agg = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
-            self.canvas_widget = self.canvas_agg.get_tk_widget()
-            self.canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+            self.canvas_agg = FigureCanvasTkAgg(
+                self.fig, master=self.plot_frame
+            )  # Removed unused ignore
+            self.canvas_widget = (
+                self.canvas_agg.get_tk_widget()
+            )  # Removed unused ignore
+            if self.canvas_widget:  # Check for None before calling pack
+                self.canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-            self.toolbar = NavigationToolbar2Tk(self.canvas_agg, self.plot_frame)
+            self.toolbar = NavigationToolbar2Tk(
+                self.canvas_agg, self.plot_frame
+            )  # Removed unused ignore
             self.toolbar.update()
-            self.canvas_agg.draw()
+            self.canvas_agg.draw()  # Removed unused ignore
         else:
             self.message_label.pack(expand=True)
 
@@ -406,7 +426,7 @@ if __name__ == "__main__":
     plot_window.start_live_update()  # Start the update loop
 
     # Example: Initial 3D Surface Plot
-    def f(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    def f(x: NDArray[Any], y: NDArray[Any]) -> NDArray[Any]:  # Use NDArray[Any]
         return np.sin(np.sqrt(x**2 + y**2))
 
     x = np.linspace(-5, 5, 100)  # Full resolution data
