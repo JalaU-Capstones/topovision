@@ -6,17 +6,19 @@ using matplotlib, optimized for a dark, minimal aesthetic.
 """
 
 import io
-from typing import Optional
+from typing import Any, Optional, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.spines import Spine  # Import Spine
+from numpy.typing import NDArray
 from PIL import Image
 
 from topovision.gui.i18n import get_translator  # Import the translator
 
 
 def generate_heatmap(
-    data: np.ndarray,
+    data: NDArray[Any],  # Changed to NDArray[Any]
     cmap: str = "plasma",
     label_key: str = "gradient_magnitude_label",  # Changed to a key for i18n
     lang: str = "en",  # Added language parameter
@@ -25,7 +27,7 @@ def generate_heatmap(
     Generates a heatmap as a PIL.Image from a 2D numpy array.
 
     Args:
-        data (np.ndarray): 2D matrix of numerical values.
+        data (NDArray[Any]): 2D matrix of numerical values.
         cmap (str): Name of the colormap to use (default: 'plasma',
                     good for dark themes).
         label_key (str): The key for the color bar label, to be translated.
@@ -63,8 +65,10 @@ def generate_heatmap(
     cbar = fig.colorbar(img_plot, ax=ax, orientation="vertical", shrink=0.8, pad=0.03)
 
     # 3. Apply dark theme to color bar elements
+    # Explicitly cast cbar.outline to Spine to help mypy
+    cbar_outline: Spine = cast(Spine, cbar.outline)  # Added cast
     cbar.ax.yaxis.set_tick_params(color=TEXT_COLOR)
-    cbar.outline.set_edgecolor("none")
+    cbar_outline.set_edgecolor("none")
     plt.setp(plt.getp(cbar.ax.axes, "yticklabels"), color=TEXT_COLOR, fontsize=8)
 
     # 4. Set descriptive label using the translator
@@ -75,7 +79,8 @@ def generate_heatmap(
 
     # Convert to image
     buffer = io.BytesIO()
-    fig.canvas.print_png(buffer)
+    # Cast fig.canvas to Any to resolve mypy error about print_png
+    cast(Any, fig.canvas).print_png(buffer)
     plt.close(fig)  # Close the figure to free up memory
 
     buffer.seek(0)

@@ -2,7 +2,7 @@
 This module defines visualizers for analysis results.
 """
 
-from typing import Optional
+from typing import Optional, cast
 
 import cv2
 import numpy as np
@@ -70,25 +70,31 @@ class HeatmapVisualizer:
                 inverse_matrix,
                 (original_image.width, original_image.height),
             )
-            # Create a mask to blend only within the selected quad
-            mask = np.zeros_like(
-                np.array(original_image, dtype=np.uint8), dtype=np.uint8
+            # Create a single-channel mask to blend only within the selected quad
+            mask = np.zeros(
+                (original_image.height, original_image.width), dtype=np.uint8
             )
-            cv2.fillConvexPoly(mask, np.int32(src_quad), (255, 255, 255))
-            mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+            # Ensure src_quad is int32 for fillConvexPoly and color is a sequence
+            cv2.fillConvexPoly(
+                mask, src_quad.astype(np.int32), (255,)
+            )  # Changed 255 to (255,)
 
             # Blend using the mask
             original_np = cv2.cvtColor(np.array(original_image), cv2.COLOR_RGB2BGR)
             blended_np = np.where(
-                mask[:, :, None] > 0,
+                mask[:, :, None] > 0,  # Expand mask to 3 channels for comparison
                 cv2.addWeighted(original_np, 0.4, warped_heatmap, 0.6, 0),
                 original_np,
             )
-            return Image.fromarray(cv2.cvtColor(blended_np, cv2.COLOR_BGR2RGB))
+            return cast(
+                Image.Image,
+                Image.fromarray(cv2.cvtColor(blended_np, cv2.COLOR_BGR2RGB)),
+            )
         else:
             # Original logic for rectangular selection without perspective
-            heatmap_pil = Image.fromarray(
-                cv2.cvtColor(heatmap_color, cv2.COLOR_BGR2RGB)
+            heatmap_pil = cast(
+                Image.Image,
+                Image.fromarray(cv2.cvtColor(heatmap_color, cv2.COLOR_BGR2RGB)),
             )
             region = analysis_result.region
             if heatmap_pil.size != (region.width, region.height):
